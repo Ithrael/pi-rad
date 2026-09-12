@@ -4,6 +4,8 @@
 
 **给 [pi](https://pi.dev) 的上帝模式。**
 
+名字里的 `rad` 取自 radical：对 pi 的彻底增强。
+
 pi-rad 是一个 [pi 包](https://pi.dev/docs/latest/packages)：一组扩展、子代理、
 提示词模板、技能和主题，补齐 pi 有意省略的进阶能力，并移除阻碍这类工作的摩擦。
 

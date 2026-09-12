@@ -1,7 +1,7 @@
 {
 	"name": "pi-rad",
 	"version": "0.1.0",
-	"description": "God mode for pi — feature unlocks, restriction removal, subagents, plan mode, and lean tooling.",
+	"description": "Subagents, plan mode, goal mode, lean tooling, and restriction removal for pi — god mode for the pi coding agent.",
 	"type": "module",
 	"license": "MIT",
 	"repository": {
@@ -18,7 +18,10 @@
 		"coding-agent",
 		"godmode",
 		"subagents",
-		"plan-mode"
+		"plan-mode",
+		"goal-mode",
+		"security-review",
+		"agent-orchestration"
 	],
 	"bin": {
 		"pi-rad": "bin/pi-rad"

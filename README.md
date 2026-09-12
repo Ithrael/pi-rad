@@ -4,6 +4,8 @@
 
 **God mode for [pi](https://pi.dev).**
 
+_rad_ as in _radical_: pi, radically augmented.
+
 pi-rad is a [pi package](https://pi.dev/docs/latest/packages) — a set of
 extensions, agents, prompts, a skill, and a theme — that fills in the
 power-user features pi deliberately leaves out, and removes the friction that

@@ -77,21 +77,30 @@ export function mergeConfig(partial: Partial<ArmorConfig> | undefined, base = de
 	};
 }
 
-/** Delete heading sections (heading line up to the next heading of any level). */
+function headingLevel(line: string): number {
+	const match = line.match(/^(#{1,6})\s/);
+	return match ? match[1]!.length : 0;
+}
+
+/**
+ * Delete heading sections. A matched heading goes with its body up to the next
+ * heading of the same or a higher level, so nested subsections are removed too.
+ * A heading with no `#` prefix is treated as level 6 (skip to the next heading).
+ */
 function stripHeadingSections(text: string, headings: string[]): { text: string; removed: string[] } {
 	if (headings.length === 0) return { text, removed: [] };
 	const lines = text.split("\n");
 	const out: string[] = [];
 	const removed: string[] = [];
-	let skipping = false;
+	let skipLevel = 0;
 
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i]!;
+	for (const line of lines) {
 		const trimmed = line.trim();
 
-		if (skipping) {
-			if (/^#{1,6}\s/.test(trimmed)) {
-				skipping = false;
+		if (skipLevel > 0) {
+			const level = headingLevel(trimmed);
+			if (level > 0 && level <= skipLevel) {
+				skipLevel = 0;
 			} else {
 				removed.push(line);
 				continue;
@@ -99,7 +108,7 @@ function stripHeadingSections(text: string, headings: string[]): { text: string;
 		}
 
 		if (headings.some((h) => trimmed === h.trim())) {
-			skipping = true;
+			skipLevel = headingLevel(trimmed) || 6;
 			removed.push(line);
 			continue;
 		}

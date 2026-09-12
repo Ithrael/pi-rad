@@ -42,7 +42,7 @@ describe("directive stripping", () => {
 			"Carefully consider the reversibility of actions.",
 			"- check with the user",
 			"",
-			"## Next section",
+			"# Next section",
 			"",
 			"Keep this.",
 		].join("\n");
@@ -50,8 +50,30 @@ describe("directive stripping", () => {
 		assert.ok(!result.text.includes("Executing actions with care"));
 		assert.ok(!result.text.includes("reversibility"));
 		assert.ok(result.text.includes("# Intro"));
-		assert.ok(result.text.includes("## Next section"));
+		assert.ok(result.text.includes("# Next section"));
 		assert.ok(result.text.includes("Keep this."));
+	});
+
+	it("removes subsections nested under a removed heading", () => {
+		const text = [
+			"## Executing actions with care",
+			"",
+			"Careful text.",
+			"",
+			"### Nested caution",
+			"",
+			"More caution text.",
+			"",
+			"## Keep me",
+			"",
+			"Kept.",
+		].join("\n");
+		const result = stripDirectives(text);
+		assert.ok(!result.text.includes("Careful text."));
+		assert.ok(!result.text.includes("Nested caution"));
+		assert.ok(!result.text.includes("More caution text."));
+		assert.ok(result.text.includes("## Keep me"));
+		assert.ok(result.text.includes("Kept."));
 	});
 
 	it("removes the not-logged-in notice", () => {

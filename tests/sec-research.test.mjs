@@ -22,6 +22,24 @@ describe("security scene scoring", () => {
 		assert.equal(matchesSecurityScene("refactor the read tool and fix the tests"), false);
 	});
 
+	it("does not trigger on acronyms embedded in ordinary words", () => {
+		for (const prompt of [
+			"read the source file and fix the tests",
+			"manage the resource pool",
+			"force push to origin",
+			"reinforce the cache layer",
+			"pocket the change for later",
+			"move the epoch boundary",
+		]) {
+			assert.equal(matchesSecurityScene(prompt), false, prompt);
+		}
+	});
+
+	it("still matches those acronyms as whole words", () => {
+		assert.ok(matchesSecurityScene("find the RCE and write a PoC"));
+		assert.ok(matchesSecurityScene("analyze CVE-2024-1234"));
+	});
+
 	it("honors an explicit pass override", () => {
 		assert.equal(scoreSecurityScene("pentest the target", true).score, 0);
 		assert.equal(matchesSecurityScene("pentest the target"), true);

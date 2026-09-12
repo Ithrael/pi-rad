@@ -159,6 +159,21 @@ function contains(haystack: string, needle: string): boolean {
 }
 
 /**
+ * Match an ASCII term on word boundaries so short acronyms do not fire on
+ * ordinary words ("rce" inside "source", "poc" inside "pocket"). Terms with
+ * non-ASCII characters (Chinese keywords, "sql注入") fall back to substring.
+ */
+function termMatcher(term: string): (text: string) => boolean {
+	if (!/^[a-z0-9][a-z0-9 &-]*$/.test(term)) return (text) => text.includes(term);
+	const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const re = new RegExp(`\\b${escaped}\\b`);
+	return (text) => re.test(text);
+}
+
+const HIGH_MATCHERS = HIGH_CONFIDENCE.map((term) => ({ term, matches: termMatcher(term) }));
+const MEDIUM_MATCHERS = MEDIUM_CONFIDENCE.map((term) => ({ term, matches: termMatcher(term) }));
+
+/**
  * "exploit" is ambiguous: "exploit caching for performance" is ordinary
  * engineering. Strip those non-security uses before term matching so the
  * bare word only counts when it refers to an actual exploit.
@@ -176,8 +191,8 @@ export function normalizePrompt(prompt: string): string {
  */
 export function scoreSecurityScene(prompt: string, explicitPass = false): SceneScore {
 	const text = normalizePrompt(prompt.toLowerCase());
-	const high = HIGH_CONFIDENCE.filter((term) => contains(text, term));
-	const medium = MEDIUM_CONFIDENCE.filter((term) => contains(text, term));
+	const high = HIGH_MATCHERS.filter((m) => m.matches(text)).map((m) => m.term);
+	const medium = MEDIUM_MATCHERS.filter((m) => m.matches(text)).map((m) => m.term);
 	const negations = NEGATIONS.filter((term) => contains(text, term));
 
 	const base = high.length * 1 + medium.length * 0.5;

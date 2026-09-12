@@ -522,6 +522,7 @@ async function runOneTmux(
 	const window = createTmuxWindow(label, cwd, scriptPath, config);
 	if (!window) {
 		invocation.cleanup();
+		fs.rmSync(dir, { recursive: true, force: true });
 		return null;
 	}
 

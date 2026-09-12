@@ -8,8 +8,9 @@
  *   2. ~/.pi-rad/patches.json   ({"<featureId>": false})
  *   3. the `default` declared in FEATURES below
  *
- * The file is re-read on every `isEnabled()` call unless cached. `reload()`
- * drops the cache; `/rad` calls it after writing so toggles apply instantly.
+ * The file is read once and cached. `reload()` drops the cache; `/rad` calls it
+ * after writing so toggles apply instantly. Edits made outside pi-rad are
+ * picked up on the next `reload()` (or session start).
  *
  * This module is intentionally dependency-free (node built-ins only) so the
  * unit tests can import it directly with Node's type stripping.

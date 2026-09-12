@@ -49,6 +49,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { configDir, isEnabled } from "./lib/features.ts";
+import { mapWithConcurrency, parseToolList, sanitizeName, shellQuote } from "./lib/subagents.ts";
 
 const MAX_CONCURRENCY = 4;
 const PER_TASK_OUTPUT_CAP = 50 * 1024;
@@ -171,14 +172,6 @@ function shouldUseTmux(mode: TmuxMode): boolean {
 	return mode === "auto" && inTmux();
 }
 
-function shellQuote(value: string): string {
-	return `'${value.replaceAll("'", `'\\''`)}'`;
-}
-
-function sanitizeName(value: string): string {
-	return value.replace(/[^\w.-]+/g, "_").slice(0, 24);
-}
-
 interface TmuxWindow {
 	window: string;
 	session?: string;
@@ -223,15 +216,6 @@ function killTmuxWindow(window: string): void {
 }
 
 // ── agent discovery ────────────────────────────────────────────────
-
-function parseToolList(value: unknown): string[] | undefined {
-	const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
-	const tools = raw
-		.filter((t): t is string => typeof t === "string")
-		.map((t) => t.trim())
-		.filter(Boolean);
-	return tools.length > 0 ? tools : undefined;
-}
 
 function isDirectory(p: string): boolean {
 	try {
@@ -642,24 +626,6 @@ async function runOne(
 	}
 }
 
-async function mapWithConcurrency<T, R>(
-	items: T[],
-	limit: number,
-	fn: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-	const results: R[] = new Array(items.length);
-	let next = 0;
-	const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-		for (;;) {
-			const index = next++;
-			if (index >= items.length) return;
-			results[index] = await fn(items[index]!, index);
-		}
-	});
-	await Promise.all(workers);
-	return results;
-}
-
 function cap(text: string): string {
 	if (text.length <= PER_TASK_OUTPUT_CAP) return text;
 	return `${text.slice(0, PER_TASK_OUTPUT_CAP)}\n\n[pi-rad: output truncated at ${PER_TASK_OUTPUT_CAP} chars]`;
@@ -804,7 +770,7 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("agents", {
 		description: "List subagents available to the subagent tool",
 		handler: async (_args, ctx) => {
-			const agents = discoverAgents(process.cwd(), "all");
+			const agents = discoverAgents(ctx.cwd, "all");
 			const config = readSubagentConfig();
 			const mode = resolveTmuxMode(undefined, config);
 			const transport = shouldUseTmux(mode)

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
 
 jobs:
@@ -22,6 +22,14 @@ jobs:
         run: |
           bash -n install.sh
           bash -n bin/pi-rad
+
+      - name: Shell lint
+        run: |
+          if ! command -v shellcheck >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y shellcheck
+          fi
+          shellcheck --severity=error --shell=bash install.sh bin/pi-rad
 
       - name: patch-settings smoke test
         run: |

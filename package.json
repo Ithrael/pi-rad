@@ -4,6 +4,14 @@
 	"description": "God mode for pi — feature unlocks, restriction removal, subagents, plan mode, and lean tooling.",
 	"type": "module",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ithrael/pi-rad.git"
+	},
+	"homepage": "https://github.com/ithrael/pi-rad#readme",
+	"bugs": {
+		"url": "https://github.com/ithrael/pi-rad/issues"
+	},
 	"keywords": [
 		"pi-package",
 		"pi",

@@ -93,6 +93,11 @@ pi-rad                 # 带 pi-rad 启动 pi
 | **自动信任** | 跳过项目信任提示并记住决定，项目级资源不再被打断。 |
 | **请求头清理** | 移除出站请求中的 provider 归属/追踪头（`x-openrouter-title`、`x-anthropic-billing-header`）。 |
 
+> **信任提示。** `auto-trust`（以及安装器写入的 `defaultProjectTrust=always`）
+> 会跳过项目本地资源**全部**的确认，包括会执行任意代码的 `.pi/extensions/*.ts`。
+> 请只在信任的仓库里运行 `pi-rad`；用 `/rad auto-trust off` 关闭，并从
+> `settings.json` 移除 `defaultProjectTrust` 可恢复提示。
+
 ### Token 与可靠性
 
 | 功能 | 说明 |

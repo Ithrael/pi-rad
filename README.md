@@ -97,6 +97,12 @@ pi-rad                 # launch pi with pi-rad enabled
 | **Auto trust** | Skips the project trust prompt and remembers the decision, so project-local resources load without a stop. |
 | **Attribution off** | Strips provider attribution/tracking headers (`x-openrouter-title`, `x-anthropic-billing-header`) from outgoing requests. |
 
+> **Trust note.** `auto-trust` (and the installer's `defaultProjectTrust=always`)
+> skips confirmation for *all* of a project's local resources, including
+> `.pi/extensions/*.ts`, which execute arbitrary code. Only run `pi-rad` in
+> repositories you trust; turn it off with `/rad auto-trust off` and remove
+> `defaultProjectTrust` from `settings.json` to restore the prompt.
+
 ### Token & reliability
 
 | Feature | What it does |

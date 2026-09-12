@@ -95,7 +95,6 @@ interface RunResult {
 	step?: number;
 	tmuxWindow?: string;
 	tmuxSession?: string;
-	logPath?: string;
 }
 
 function emptyUsage(): RunUsage {
@@ -528,7 +527,6 @@ async function runOneTmux(
 
 	base.tmuxWindow = window.window;
 	base.tmuxSession = window.session;
-	base.logPath = rawPath;
 	notify?.(
 		window.session
 			? `subagent ${label} → tmux session ${window.session} (window ${window.window}); attach with: tmux attach -t ${window.session}`
@@ -559,6 +557,7 @@ async function runOneTmux(
 		}
 	} finally {
 		invocation.cleanup();
+		fs.rmSync(dir, { recursive: true, force: true });
 	}
 
 	base.output = collector.finalize();
@@ -609,7 +608,6 @@ async function runOne(
 		base.stderr += "tmux window could not be created; fell back to pipe transport\n";
 		base.tmuxWindow = undefined;
 		base.tmuxSession = undefined;
-		base.logPath = undefined;
 		// prepareInvocation was already cleaned up inside runOneTmux
 		const retry = await prepareInvocation(agent, task, defaults, base);
 		try {

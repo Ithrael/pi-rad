@@ -1,9 +1,9 @@
 /**
- * pi-red core
+ * pi-rad core
  *
  * One extension that owns the cross-cutting "god mode" behavior:
  *
- *   - feature registry + `/red` control panel (`/red`, `/red-doctor`)
+ *   - feature registry + `/rad` control panel (`/rad`, `/rad-doctor`)
  *   - project auto-trust
  *   - provider attribution/tracking header stripping
  *   - security-research system-prompt framing
@@ -12,7 +12,7 @@
  *   - footer status line
  *
  * Feature resolution lives in ./lib/features.ts. Every hook checks its own
- * feature id at call time, so toggles from `/red` take effect immediately
+ * feature id at call time, so toggles from `/rad` take effect immediately
  * (except lean/lean-max, which are applied explicitly after a toggle).
  */
 
@@ -30,8 +30,8 @@ import {
 } from "./lib/features.ts";
 import { matchesSecurityScene, SECURITY_RESEARCH_CONTEXT } from "./lib/sec-research.ts";
 
-const STATUS_KEY = "pi-red";
-const THEME_NAME = "pi-red";
+const STATUS_KEY = "pi-rad";
+const THEME_NAME = "pi-rad";
 const VERSION = "0.1.0";
 
 const DANGEROUS_BASH = [
@@ -53,7 +53,7 @@ function setFooterStatus(ctx: ExtensionContext | ExtensionCommandContext): void 
 		return;
 	}
 	const active = FEATURES.filter((f) => isEnabled(f.id)).map((f) => f.id);
-	ctx.ui.setStatus(STATUS_KEY, active.length > 0 ? `red:${active.length}` : "red:off");
+	ctx.ui.setStatus(STATUS_KEY, active.length > 0 ? `rad:${active.length}` : "rad:off");
 }
 
 /** True when the user explicitly chose a theme on the command line. */
@@ -69,7 +69,7 @@ function userPickedTheme(argv: readonly string[] = process.argv): boolean {
 }
 
 /**
- * Switch the session to the pi-red theme without persisting it.
+ * Switch the session to the pi-rad theme without persisting it.
  *
  * We pass the loaded Theme instance (not its name) on purpose: setTheme(name)
  * writes through to settings.json, while setTheme(instance) is per-session
@@ -90,11 +90,11 @@ function featureTable(): string {
 		return `  [${mark}] ${f.id.padEnd(15)} ${f.desc}`;
 	});
 	return [
-		`pi-red v${VERSION} — features`,
+		`pi-rad v${VERSION} — features`,
 		...lines,
 		"",
 		`config: ${patchesPath()}`,
-		"toggle with /red, or /red <feature> on|off",
+		"toggle with /rad, or /rad <feature> on|off",
 	].join("\n");
 }
 
@@ -152,7 +152,7 @@ export default function (pi: ExtensionAPI) {
 		if (!isEnabled("sec-research")) return undefined;
 		// The armor directive is a stronger superset; do not inject both.
 		if (isEnabled("armor")) return undefined;
-		if (event.systemPrompt.includes("Security research context (pi-red)")) return undefined;
+		if (event.systemPrompt.includes("Security research context (pi-rad)")) return undefined;
 		if (!matchesSecurityScene(event.prompt)) return undefined;
 		return { systemPrompt: `${event.systemPrompt}\n\n${SECURITY_RESEARCH_CONTEXT}` };
 	});
@@ -165,10 +165,10 @@ export default function (pi: ExtensionAPI) {
 		if (!DANGEROUS_BASH.some((re) => re.test(command))) return undefined;
 
 		if (!ctx.hasUI) {
-			return { block: true, reason: "pi-red guard: destructive command blocked (no UI for confirmation)" };
+			return { block: true, reason: "pi-rad guard: destructive command blocked (no UI for confirmation)" };
 		}
-		const ok = await ctx.ui.confirm("pi-red guard", `Allow this command?\n\n${command}`);
-		if (!ok) return { block: true, reason: "Blocked by pi-red guard" };
+		const ok = await ctx.ui.confirm("pi-rad guard", `Allow this command?\n\n${command}`);
+		if (!ok) return { block: true, reason: "Blocked by pi-rad guard" };
 		return undefined;
 	});
 
@@ -184,9 +184,9 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setStatus(STATUS_KEY, undefined);
 	});
 
-	// ── /red ─────────────────────────────────────────────────────────
-	pi.registerCommand("red", {
-		description: "pi-red control panel — show or toggle god-mode features",
+	// ── /rad ─────────────────────────────────────────────────────────
+	pi.registerCommand("rad", {
+		description: "pi-rad control panel — show or toggle god-mode features",
 		getArgumentCompletions: (prefix: string) => {
 			const values = FEATURES.flatMap((f) => [`${f.id} on`, `${f.id} off`, f.id]);
 			const filtered = values.filter((v) => v.startsWith(prefix));
@@ -195,12 +195,12 @@ export default function (pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			const tokens = args.trim().split(/\s+/).filter(Boolean);
 
-			// /red <feature> [on|off]
+			// /rad <feature> [on|off]
 			if (tokens.length > 0) {
 				const id = tokens[0]!;
 				const def = feature(id);
 				if (!def || def.locked) {
-					ctx.ui.notify(`pi-red: unknown feature "${id}"`, "error");
+					ctx.ui.notify(`pi-rad: unknown feature "${id}"`, "error");
 					return;
 				}
 				const value = tokens[1] === "on" ? true : tokens[1] === "off" ? false : !isEnabled(id);
@@ -208,13 +208,13 @@ export default function (pi: ExtensionAPI) {
 				if (id === "lean" || id === "lean-max") applyLean(pi);
 				if (id === "theme" && value) applyTheme(ctx);
 				setFooterStatus(ctx);
-				ctx.ui.notify(`pi-red: ${id} = ${value ? "on" : "off"}`, "info");
+				ctx.ui.notify(`pi-rad: ${id} = ${value ? "on" : "off"}`, "info");
 				return;
 			}
 
 			// non-interactive: print the table
 			if (!ctx.hasUI) {
-				pi.sendMessage({ customType: "pi-red", content: featureTable(), display: true });
+				pi.sendMessage({ customType: "pi-rad", content: featureTable(), display: true });
 				return;
 			}
 
@@ -224,7 +224,7 @@ export default function (pi: ExtensionAPI) {
 					(f) => `${isEnabled(f.id) ? "●" : "○"} ${f.id} — ${f.desc}`,
 				);
 				items.push("Done");
-				const choice = await ctx.ui.select("pi-red features (● on / ○ off)", items);
+				const choice = await ctx.ui.select("pi-rad features (● on / ○ off)", items);
 				if (!choice || choice === "Done") break;
 				const id = choice.split(/\s+/)[1];
 				if (!id || !feature(id)) continue;
@@ -237,9 +237,9 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	// ── /red-doctor ──────────────────────────────────────────────────
-	pi.registerCommand("red-doctor", {
-		description: "pi-red diagnostics: version, config, feature state",
+	// ── /rad-doctor ──────────────────────────────────────────────────
+	pi.registerCommand("rad-doctor", {
+		description: "pi-rad diagnostics: version, config, feature state",
 		handler: async (_args, ctx) => {
 			let patchesRaw = "(none)";
 			try {
@@ -249,7 +249,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			const tools = pi.getActiveTools();
 			const report = [
-				`pi-red v${VERSION}`,
+				`pi-rad v${VERSION}`,
 				`config dir : ${configDir()}`,
 				`patches    : ${patchesPath()}`,
 				`status     : ${statusLine()}`,
@@ -257,8 +257,8 @@ export default function (pi: ExtensionAPI) {
 				`patches.json:`,
 				patchesRaw,
 			].join("\n");
-			pi.sendMessage({ customType: "pi-red", content: report, display: true });
-			ctx.ui.notify("pi-red doctor written to transcript", "info");
+			pi.sendMessage({ customType: "pi-rad", content: report, display: true });
+			ctx.ui.notify("pi-rad doctor written to transcript", "info");
 		},
 	});
 }

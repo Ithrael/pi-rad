@@ -17,18 +17,18 @@ import {
 	writePatches,
 } from "../extensions/lib/features.ts";
 
-const ORIGINAL_HOME = process.env.PI_RED_HOME;
+const ORIGINAL_HOME = process.env.PI_RAD_HOME;
 let sandbox;
 
 before(() => {
-	sandbox = mkdtempSync(join(tmpdir(), "pi-red-test-"));
-	process.env.PI_RED_HOME = sandbox;
+	sandbox = mkdtempSync(join(tmpdir(), "pi-rad-test-"));
+	process.env.PI_RAD_HOME = sandbox;
 	reload();
 });
 
 after(() => {
-	if (ORIGINAL_HOME === undefined) delete process.env.PI_RED_HOME;
-	else process.env.PI_RED_HOME = ORIGINAL_HOME;
+	if (ORIGINAL_HOME === undefined) delete process.env.PI_RAD_HOME;
+	else process.env.PI_RAD_HOME = ORIGINAL_HOME;
 	reload();
 	rmSync(sandbox, { recursive: true, force: true });
 });
@@ -51,17 +51,17 @@ describe("feature registry", () => {
 	});
 
 	it("lets env override the file and the default", () => {
-		process.env.PI_RED_FEATURE_LEAN = "1";
+		process.env.PI_RAD_FEATURE_LEAN = "1";
 		try {
 			assert.equal(resolveFeature("lean"), true);
 		} finally {
-			delete process.env.PI_RED_FEATURE_LEAN;
+			delete process.env.PI_RAD_FEATURE_LEAN;
 		}
-		process.env.PI_RED_FEATURE_SUBAGENTS = "off";
+		process.env.PI_RAD_FEATURE_SUBAGENTS = "off";
 		try {
 			assert.equal(resolveFeature("subagents"), false);
 		} finally {
-			delete process.env.PI_RED_FEATURE_SUBAGENTS;
+			delete process.env.PI_RAD_FEATURE_SUBAGENTS;
 		}
 	});
 
@@ -100,7 +100,7 @@ describe("patches.json persistence", () => {
 	it("reports a status line", () => {
 		writePatches({});
 		reload();
-		assert.match(statusLine(), /^red:/);
+		assert.match(statusLine(), /^rad:/);
 	});
 });
 

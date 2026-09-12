@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Safely merge pi-red preferences into a pi settings.json.
+ * Safely merge pi-rad preferences into a pi settings.json.
  *
  * Usage:
  *   node patch-settings.mjs <settings.json> [--set k=v ...] [--set-if-absent k=v ...] [--dry-run]
@@ -115,7 +115,7 @@ if (dryRun) {
 const dir = dirname(settingsPath);
 if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 const mode = existed ? statSync(settingsPath).mode & 0o777 : 0o600;
-const tmp = `${settingsPath}.pi-red.${process.pid}.tmp`;
+const tmp = `${settingsPath}.pi-rad.${process.pid}.tmp`;
 writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`, { encoding: "utf-8", mode });
 chmodSync(tmp, mode);
 renameSync(tmp, settingsPath);

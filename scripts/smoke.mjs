@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * pi-red end-to-end smoke test.
+ * pi-rad end-to-end smoke test.
  *
- * Drives the *installed* pi-red through RPC mode and checks that the whole
- * loop closes: resource discovery, /red + /red-doctor, lean tool trimming, goal
+ * Drives the *installed* pi-rad through RPC mode and checks that the whole
+ * loop closes: resource discovery, /rad + /rad-doctor, lean tool trimming, goal
  * mode, plan mode, subagents, and armor payload surgery.
  *
  * This talks to a real model, so it is not part of `npm test`. Run it after
- * installing pi-red:
+ * installing pi-rad:
  *
  *   node scripts/smoke.mjs
  *   node scripts/smoke.mjs --only goal,subagent
@@ -174,16 +174,16 @@ await scenario("discovery", async () => {
 	);
 	const names = new Set((response.data?.commands ?? []).map((c) => c.name));
 	const required = [
-		"red",
-		"red-doctor",
+		"rad",
+		"rad-doctor",
 		"armor",
 		"goal",
 		"plan",
 		"agents",
-		"red-review",
-		"red-harden",
-		"red-deep",
-		"skill:red-security-review",
+		"rad-review",
+		"rad-harden",
+		"rad-deep",
+		"skill:rad-security-review",
 	];
 	const missing = required.filter((c) => !names.has(c));
 	return missing.length === 0
@@ -193,19 +193,19 @@ await scenario("discovery", async () => {
 
 await scenario("doctor", async () => {
 	const session = new RpcSession([]);
-	session.prompt("/red-doctor");
+	session.prompt("/rad-doctor");
 	const response = await session.waitFor(
-		(e) => e.type === "message_start" && e.message?.customType === "pi-red" && String(e.message.content).includes("pi-red v"),
+		(e) => e.type === "message_start" && e.message?.customType === "pi-rad" && String(e.message.content).includes("pi-rad v"),
 		60_000,
-		"/red-doctor output",
+		"/rad-doctor output",
 	);
 	const content = String(response.message.content);
-	const hasTheme = content.includes("pi-red") && content.includes("active tools");
+	const hasTheme = content.includes("pi-rad") && content.includes("active tools");
 	return hasTheme ? { detail: content.split("\n")[0] } : { status: "FAIL", detail: "doctor output missing fields" };
 });
 
 await scenario("armor", async () => {
-	const dir = mkdtempSync(join(tmpdir(), "pi-red-smoke-"));
+	const dir = mkdtempSync(join(tmpdir(), "pi-rad-smoke-"));
 	const probePath = join(dir, "probe.ts");
 	const outPath = join(dir, "probe.json");
 	writeFileSync(
@@ -250,17 +250,17 @@ export default function (pi: ExtensionAPI) {
 
 await scenario("lean", async () => {
 	const session = new RpcSession(["--tools", "read,bash,edit,write,grep,find,ls"]);
-	session.prompt("/red lean on");
+	session.prompt("/rad lean on");
 	await session.waitFor(
-		(e) => e.type === "message_start" && e.message?.customType === "pi-red",
+		(e) => e.type === "message_start" && e.message?.customType === "pi-rad",
 		60_000,
 		"lean notify",
 	).catch(() => null);
-	session.prompt("/red-doctor");
+	session.prompt("/rad-doctor");
 	const response = await session.waitFor(
-		(e) => e.type === "message_start" && e.message?.customType === "pi-red" && String(e.message.content).includes("active tools"),
+		(e) => e.type === "message_start" && e.message?.customType === "pi-rad" && String(e.message.content).includes("active tools"),
 		60_000,
-		"/red-doctor after lean",
+		"/rad-doctor after lean",
 	);
 	const line = String(response.message.content).split("\n").find((l) => l.startsWith("active tools")) ?? "";
 	const tools = line
@@ -269,14 +269,14 @@ await scenario("lean", async () => {
 		.map((s) => s.trim())
 		.filter(Boolean);
 	const trimmed = ["grep", "find", "ls"].filter((t) => tools.includes(t));
-	session.prompt("/red lean off");
+	session.prompt("/rad lean off");
 	return trimmed.length === 0
 		? { detail: "grep/find/ls trimmed" }
 		: { status: "FAIL", detail: `still active: ${trimmed.join(", ")}` };
 });
 
 await scenario("plan", async () => {
-	const target = join(tmpdir(), `pi-red-plan-probe-${Date.now()}.txt`);
+	const target = join(tmpdir(), `pi-rad-plan-probe-${Date.now()}.txt`);
 	try {
 		const session = new RpcSession([]);
 		session.prompt("/plan");
@@ -294,7 +294,7 @@ await scenario("plan", async () => {
 });
 
 await scenario("goal", async () => {
-	const session = new RpcSession([], { PI_RED_GOAL_MAX: "3" });
+	const session = new RpcSession([], { PI_RAD_GOAL_MAX: "3" });
 	session.prompt(
 		"/goal Reply with exactly the word DONE, then call goal_complete with summary 'said DONE' and evidence 'assistant said DONE'.",
 	);
@@ -318,7 +318,7 @@ await scenario("subagent", async () => {
 	);
 	const blob = JSON.stringify(done.result ?? "");
 	const expectTmux = ["1", "true", "always", "window"].includes(
-		(process.env.PI_RED_SUBAGENT_TMUX ?? "").toLowerCase(),
+		(process.env.PI_RAD_SUBAGENT_TMUX ?? "").toLowerCase(),
 	);
 	if (expectTmux && !blob.includes("tmux")) {
 		return { status: "FAIL", detail: "expected tmux transport but the result had no tmux window" };

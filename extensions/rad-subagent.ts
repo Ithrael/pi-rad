@@ -1,5 +1,5 @@
 /**
- * pi-red subagents
+ * pi-rad subagents
  *
  * Adds a `subagent` tool that delegates work to isolated `pi` processes, each
  * with its own context window. Three modes:
@@ -15,15 +15,15 @@
  *           watch the live transcript. The parent still gets the structured
  *           result by tailing the raw NDJSON the pane's viewer writes.
  *
- * Transport resolution: tool param `tmux` > `PI_RED_SUBAGENT_TMUX` env >
- * ~/.pi-red/subagents.json > "auto". "auto" uses tmux only when already inside
+ * Transport resolution: tool param `tmux` > `PI_RAD_SUBAGENT_TMUX` env >
+ * ~/.pi-rad/subagents.json > "auto". "auto" uses tmux only when already inside
  * a tmux session; when not inside tmux and mode is "always", a session is
  * created and its name is reported.
  *
  * Agents are markdown files with YAML frontmatter (name, description, tools,
  * model). They are discovered from, in this order:
  *
- *   <pi-red>/agents      bundled defaults
+ *   <pi-rad>/agents      bundled defaults
  *   ~/.pi/agent/agents   user
  *   <cwd>/.pi/agents     project (nearest ancestor)
  *
@@ -109,7 +109,7 @@ interface SubagentConfig {
 	session: string;
 }
 
-const DEFAULT_CONFIG: SubagentConfig = { tmux: "auto", focus: false, session: "pi-red" };
+const DEFAULT_CONFIG: SubagentConfig = { tmux: "auto", focus: false, session: "pi-rad" };
 
 let configCache: { mtime: number; value: SubagentConfig } | null = null;
 
@@ -159,7 +159,7 @@ function inTmux(): boolean {
 function resolveTmuxMode(override: boolean | undefined, config: SubagentConfig): TmuxMode {
 	if (override === false) return "off";
 	if (override === true) return "always";
-	const raw = (process.env.PI_RED_SUBAGENT_TMUX ?? config.tmux ?? "auto").toLowerCase();
+	const raw = (process.env.PI_RAD_SUBAGENT_TMUX ?? config.tmux ?? "auto").toLowerCase();
 	if (["0", "false", "off", "no", "never"].includes(raw)) return "off";
 	if (["1", "true", "on", "yes", "always", "window"].includes(raw)) return "always";
 	return "auto";
@@ -201,7 +201,7 @@ function createTmuxWindow(label: string, cwd: string, scriptPath: string, config
 	if (inTmux()) {
 		args = ["new-window", ...base, ...placement, ...target, command];
 	} else {
-		session = sanitizeName(config.session) || "pi-red";
+		session = sanitizeName(config.session) || "pi-rad";
 		if (tmuxSessionExists(session)) {
 			args = ["new-window", ...base, ...placement, "-t", session, ...target, command];
 		} else {
@@ -328,7 +328,7 @@ function getPiInvocation(args: string[]): { command: string; args: string[] } {
 }
 
 async function writeSystemPromptFile(agentName: string, prompt: string): Promise<{ dir: string; filePath: string }> {
-	const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "pi-red-subagent-"));
+	const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "pi-rad-subagent-"));
 	const safe = agentName.replace(/[^\w.-]+/g, "_");
 	const filePath = path.join(dir, `prompt-${safe}.md`);
 	await withFileMutationQueue(filePath, async () => {
@@ -515,7 +515,7 @@ async function runOneTmux(
 	config: SubagentConfig,
 	notify: ((message: string) => void) | undefined,
 ): Promise<RunResult | null> {
-	const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "pi-red-subagent-"));
+	const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "pi-rad-subagent-"));
 	const rawPath = path.join(dir, "stream.ndjson");
 	const exitPath = path.join(dir, "exit");
 	const scriptPath = path.join(dir, "run.sh");
@@ -529,7 +529,7 @@ async function runOneTmux(
 		`${commandLine} 2>&1 | ${shellQuote(process.execPath)} ${shellQuote(VIEWER_SCRIPT)} ${shellQuote(rawPath)}`,
 		"code=$?",
 		`printf '%s\\n' "$code" > ${shellQuote(exitPath)}`,
-		`printf '\\n[pi-red subagent %s finished: exit %s]\\n' ${shellQuote(label)} "$code"`,
+		`printf '\\n[pi-rad subagent %s finished: exit %s]\\n' ${shellQuote(label)} "$code"`,
 		"printf 'Press Enter to close this window.\\n'",
 		"read -r _ || true",
 		"",
@@ -662,7 +662,7 @@ async function mapWithConcurrency<T, R>(
 
 function cap(text: string): string {
 	if (text.length <= PER_TASK_OUTPUT_CAP) return text;
-	return `${text.slice(0, PER_TASK_OUTPUT_CAP)}\n\n[pi-red: output truncated at ${PER_TASK_OUTPUT_CAP} chars]`;
+	return `${text.slice(0, PER_TASK_OUTPUT_CAP)}\n\n[pi-rad: output truncated at ${PER_TASK_OUTPUT_CAP} chars]`;
 }
 
 function summarize(result: RunResult): string {
@@ -817,8 +817,8 @@ export default function (pi: ExtensionAPI) {
 					? "No agents found. Add .md files to ~/.pi/agent/agents/ or <cwd>/.pi/agents/."
 					: agents.map((a) => `${a.name} (${a.source}) — ${a.description}`).join("\n");
 			pi.sendMessage({
-				customType: "pi-red",
-				content: `pi-red agents\ntransport: ${transport}\n\n${text}`,
+				customType: "pi-rad",
+				content: `pi-rad agents\ntransport: ${transport}\n\n${text}`,
 				display: true,
 			});
 			ctx.ui.notify(`${agents.length} agent(s), transport: ${transport}`, "info");

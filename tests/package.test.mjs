@@ -62,7 +62,7 @@ describe("package manifest", () => {
 	const pkg = JSON.parse(readFileSync(new URL("package.json", root), "utf-8"));
 
 	it("is a pi package", () => {
-		assert.equal(pkg.name, "pi-red");
+		assert.equal(pkg.name, "pi-rad");
 		assert.ok(pkg.keywords.includes("pi-package"));
 		assert.equal(pkg.type, "module");
 	});
@@ -81,10 +81,10 @@ describe("package manifest", () => {
 	});
 });
 
-describe("pi-red theme", () => {
+describe("pi-rad theme", () => {
 	it("declares every required color", () => {
-		const theme = JSON.parse(readFileSync(new URL("themes/pi-red.json", root), "utf-8"));
-		assert.equal(theme.name, "pi-red");
+		const theme = JSON.parse(readFileSync(new URL("themes/pi-rad.json", root), "utf-8"));
+		assert.equal(theme.name, "pi-rad");
 		assert.ok(!theme.name.includes("/"), "theme name must not contain '/'");
 		for (const key of REQUIRED_COLORS) {
 			assert.ok(key in theme.colors, `theme is missing color "${key}"`);

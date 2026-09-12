@@ -1,15 +1,15 @@
 /**
- * pi-red feature gates
+ * pi-rad feature gates
  *
  * A feature is the user-facing toggle unit. It is resolved with this
  * precedence (highest wins):
  *
- *   1. PI_RED_FEATURE_<ID> env var (dashes -> underscores, upper-cased)
- *   2. ~/.pi-red/patches.json   ({"<featureId>": false})
+ *   1. PI_RAD_FEATURE_<ID> env var (dashes -> underscores, upper-cased)
+ *   2. ~/.pi-rad/patches.json   ({"<featureId>": false})
  *   3. the `default` declared in FEATURES below
  *
  * The file is re-read on every `isEnabled()` call unless cached. `reload()`
- * drops the cache; `/red` calls it after writing so toggles apply instantly.
+ * drops the cache; `/rad` calls it after writing so toggles apply instantly.
  *
  * This module is intentionally dependency-free (node built-ins only) so the
  * unit tests can import it directly with Node's type stripping.
@@ -20,9 +20,9 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 export interface FeatureDef {
-	/** Stable id used in patches.json, env vars, and `/red`. */
+	/** Stable id used in patches.json, env vars, and `/rad`. */
 	id: string;
-	/** One-line human description shown in `/red`. */
+	/** One-line human description shown in `/rad`. */
 	desc: string;
 	/** Enabled when neither env nor patches.json says anything. */
 	default: boolean;
@@ -68,12 +68,12 @@ export const FEATURES: readonly FeatureDef[] = [
 	},
 	{
 		id: "statusline",
-		desc: "Show pi-red feature status in the footer",
+		desc: "Show pi-rad feature status in the footer",
 		default: true,
 	},
 	{
 		id: "theme",
-		desc: "Use the pi-red (red) theme so an active pi-red is visible at a glance",
+		desc: "Use the pi-rad (red) theme so an active pi-rad is visible at a glance",
 		default: true,
 	},
 	{
@@ -95,11 +95,11 @@ export const FEATURES: readonly FeatureDef[] = [
 
 const FEATURE_MAP: Map<string, FeatureDef> = new Map(FEATURES.map((f) => [f.id, f]));
 
-/** Root config dir: $PI_RED_HOME or ~/.pi-red. */
+/** Root config dir: $PI_RAD_HOME or ~/.pi-rad. */
 export function configDir(): string {
-	const override = process.env.PI_RED_HOME?.trim();
+	const override = process.env.PI_RAD_HOME?.trim();
 	if (override) return override;
-	return join(homedir(), ".pi-red");
+	return join(homedir(), ".pi-rad");
 }
 
 export function patchesPath(): string {
@@ -111,7 +111,7 @@ export function feature(id: string): FeatureDef | undefined {
 }
 
 export function envKey(id: string): string {
-	return `PI_RED_FEATURE_${id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
+	return `PI_RAD_FEATURE_${id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
 }
 
 function parseBool(value: string): boolean | undefined {
@@ -190,5 +190,5 @@ export function setFeature(id: string, value: boolean): void {
 
 export function statusLine(): string {
 	const on = FEATURES.filter((f) => isEnabled(f.id)).map((f) => f.id);
-	return on.length > 0 ? `red:${on.join(",")}` : "red:off";
+	return on.length > 0 ? `rad:${on.join(",")}` : "rad:off";
 }

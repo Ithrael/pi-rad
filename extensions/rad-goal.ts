@@ -1,7 +1,7 @@
 /**
- * pi-red goal mode
+ * pi-rad goal mode
  *
- * A completion contract. While a goal is active, pi-red re-prompts the agent
+ * A completion contract. While a goal is active, pi-rad re-prompts the agent
  * on every settle until the goal is verifiably done, instead of stopping at a
  * plan or a status update.
  *
@@ -23,11 +23,11 @@ import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@e
 import { Type } from "typebox";
 import { isEnabled } from "./lib/features.ts";
 
-const STATE_TYPE = "red-goal";
-const MESSAGE_TYPE = "pi-red-goal";
-const STATUS_KEY = "pi-red-goal";
-const PROMPT_MARKER = "Active goal (pi-red goal mode)";
-const DEFAULT_MAX_ITERATIONS = Number.parseInt(process.env.PI_RED_GOAL_MAX ?? "20", 10) || 20;
+const STATE_TYPE = "rad-goal";
+const MESSAGE_TYPE = "pi-rad-goal";
+const STATUS_KEY = "pi-rad-goal";
+const PROMPT_MARKER = "Active goal (pi-rad goal mode)";
+const DEFAULT_MAX_ITERATIONS = Number.parseInt(process.env.PI_RAD_GOAL_MAX ?? "20", 10) || 20;
 
 type GoalStatus = "active" | "blocked" | "complete";
 
@@ -106,7 +106,7 @@ export default function (pi: ExtensionAPI) {
 	};
 
 	const statusText = (): string => {
-		if (!state) return "pi-red goal mode: no active goal. Set one with /goal <text>.";
+		if (!state) return "pi-rad goal mode: no active goal. Set one with /goal <text>.";
 		const lines = [
 			`Goal: ${state.text}`,
 			`Status: ${state.status}`,
@@ -183,7 +183,7 @@ export default function (pi: ExtensionAPI) {
 			};
 			persist();
 			setStatus(ctx);
-			ctx.ui.notify("pi-red goal: iteration budget exhausted, paused", "warning");
+			ctx.ui.notify("pi-rad goal: iteration budget exhausted, paused", "warning");
 			pi.sendMessage({
 				customType: MESSAGE_TYPE,
 				content: `Goal paused: iteration budget exhausted (${state.maxIterations}). Review the state and run /goal resume to continue, or /goal clear to drop it.`,
@@ -206,10 +206,10 @@ export default function (pi: ExtensionAPI) {
 		name: "goal_complete",
 		label: "Goal Complete",
 		description:
-			"Mark the active pi-red goal complete. Call only when the whole goal is verifiably done, with the evidence that proves it.",
+			"Mark the active pi-rad goal complete. Call only when the whole goal is verifiably done, with the evidence that proves it.",
 		promptSnippet: "Mark the active goal complete with evidence",
 		promptGuidelines: [
-			"Use goal_complete when an active pi-red goal has been verifiably achieved; include the evidence (commands, output, paths) that proves it.",
+			"Use goal_complete when an active pi-rad goal has been verifiably achieved; include the evidence (commands, output, paths) that proves it.",
 		],
 		parameters: Type.Object({
 			summary: Type.String({ description: "What was achieved, in a few sentences" }),
@@ -217,7 +217,7 @@ export default function (pi: ExtensionAPI) {
 		}),
 		async execute(_toolCallId, params) {
 			if (!isEnabled("goal")) {
-				return { content: [{ type: "text", text: "pi-red goal mode is disabled." }], details: {} };
+				return { content: [{ type: "text", text: "pi-rad goal mode is disabled." }], details: {} };
 			}
 			if (!state) {
 				return { content: [{ type: "text", text: "No active goal to complete." }], details: {} };
@@ -240,10 +240,10 @@ export default function (pi: ExtensionAPI) {
 		name: "goal_blocked",
 		label: "Goal Blocked",
 		description:
-			"Pause the active pi-red goal and hand control back to the user. Use when you cannot proceed without input, access, or approval.",
+			"Pause the active pi-rad goal and hand control back to the user. Use when you cannot proceed without input, access, or approval.",
 		promptSnippet: "Pause the active goal and report a blocker",
 		promptGuidelines: [
-			"Use goal_blocked when an active pi-red goal cannot proceed without user input, access, or approval; give the exact blocker.",
+			"Use goal_blocked when an active pi-rad goal cannot proceed without user input, access, or approval; give the exact blocker.",
 		],
 		parameters: Type.Object({
 			reason: Type.String({ description: "The exact blocker and what you need from the user" }),
@@ -263,7 +263,7 @@ export default function (pi: ExtensionAPI) {
 
 	// ── /goal ────────────────────────────────────────────────────────
 	pi.registerCommand("goal", {
-		description: "pi-red goal mode: keep working until the goal is verifiably done",
+		description: "pi-rad goal mode: keep working until the goal is verifiably done",
 		getArgumentCompletions: (prefix: string) => {
 			const values = ["resume", "done", "clear", "status"];
 			const filtered = values.filter((v) => v.startsWith(prefix));
@@ -271,7 +271,7 @@ export default function (pi: ExtensionAPI) {
 		},
 		handler: async (args, ctx) => {
 			if (!isEnabled("goal")) {
-				ctx.ui.notify("pi-red: goal feature is off (enable with /red goal on)", "warning");
+				ctx.ui.notify("pi-rad: goal feature is off (enable with /rad goal on)", "warning");
 				return;
 			}
 			const arg = args.trim();
@@ -292,7 +292,7 @@ export default function (pi: ExtensionAPI) {
 
 			if (arg === "done") {
 				if (!state) {
-					ctx.ui.notify("pi-red: no active goal", "warning");
+					ctx.ui.notify("pi-rad: no active goal", "warning");
 					return;
 				}
 				state = { ...state, status: "complete", completedAt: Date.now(), evidence: state.evidence ?? "(marked done manually)" };
@@ -304,7 +304,7 @@ export default function (pi: ExtensionAPI) {
 
 			if (arg === "resume") {
 				if (!state) {
-					ctx.ui.notify("pi-red: no active goal to resume", "warning");
+					ctx.ui.notify("pi-rad: no active goal to resume", "warning");
 					return;
 				}
 				state = { ...state, status: "active", blocker: undefined, iterations: 0 };
@@ -329,7 +329,7 @@ export default function (pi: ExtensionAPI) {
 			suppressContinue = false;
 			persist();
 			setStatus(ctx);
-			ctx.ui.notify("pi-red goal set", "info");
+			ctx.ui.notify("pi-rad goal set", "info");
 			pi.sendUserMessage(
 				`Goal: ${arg}\n\nBegin now. Read the smallest useful context first, then work until the goal is verifiably done. Call goal_complete with evidence when it is, or goal_blocked if you are stuck.`,
 			);

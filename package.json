@@ -1,5 +1,5 @@
 {
-	"name": "pi-red",
+	"name": "pi-rad",
 	"version": "0.1.0",
 	"description": "God mode for pi — feature unlocks, restriction removal, subagents, plan mode, and lean tooling.",
 	"type": "module",
@@ -13,7 +13,7 @@
 		"plan-mode"
 	],
 	"bin": {
-		"pi-red": "bin/pi-red"
+		"pi-rad": "bin/pi-rad"
 	},
 	"files": [
 		"agents",

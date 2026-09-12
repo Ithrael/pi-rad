@@ -21,7 +21,7 @@ jobs:
       - name: Shell syntax
         run: |
           bash -n install.sh
-          bash -n bin/pi-red
+          bash -n bin/pi-rad
 
       - name: patch-settings smoke test
         run: |
@@ -31,7 +31,7 @@ jobs:
           node scripts/patch-settings.mjs /tmp/pi-agent/settings.json \
             --set-if-absent defaultProjectTrust=always \
             --set-if-absent enableInstallTelemetry=false \
-            --set-if-absent theme=pi-red
+            --set-if-absent theme=pi-rad
           grep -q '"defaultProjectTrust": "always"' /tmp/pi-agent/settings.json
           grep -q '"theme": "dark"' /tmp/pi-agent/settings.json
           grep -q '"enableInstallTelemetry": false' /tmp/pi-agent/settings.json

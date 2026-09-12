@@ -1,5 +1,5 @@
 /**
- * pi-red plan mode
+ * pi-rad plan mode
  *
  * A read-only planning posture. When active it:
  *   - restricts the active tools to a read-only set
@@ -7,7 +7,7 @@
  *   - hard-blocks `edit`/`write` tool calls as defense in depth
  *
  * Toggle with `/plan` or `ctrl+alt+p`. State is persisted per session through
- * pi.appendEntry("red-plan", ...) and restored on resume/fork.
+ * pi.appendEntry("rad-plan", ...) and restored on resume/fork.
  *
  * Controlled by the `plan-mode` feature gate.
  */
@@ -17,9 +17,9 @@ import { isEnabled } from "./lib/features.ts";
 
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "questionnaire"];
 const BLOCKED_TOOLS = new Set(["edit", "write"]);
-const STATE_TYPE = "red-plan";
+const STATE_TYPE = "rad-plan";
 
-const PLAN_INSTRUCTIONS = `## Plan mode (pi-red) is active
+const PLAN_INSTRUCTIONS = `## Plan mode (pi-rad) is active
 
 Your job is to deeply understand the problem and produce a concrete plan. You
 are in a read-only posture: do not modify files.
@@ -62,8 +62,8 @@ export default function (pi: ExtensionAPI) {
 		state = { active: true, toolsBefore: pi.getActiveTools() };
 		pi.setActiveTools(planToolsFor(available));
 		pi.appendEntry(STATE_TYPE, state);
-		ctx.ui.setStatus("pi-red-plan", "plan");
-		ctx.ui.notify("pi-red: plan mode on (read-only)", "info");
+		ctx.ui.setStatus("pi-rad-plan", "plan");
+		ctx.ui.notify("pi-rad: plan mode on (read-only)", "info");
 	};
 
 	const disable = (ctx: ExtensionContext) => {
@@ -71,8 +71,8 @@ export default function (pi: ExtensionAPI) {
 		state = { active: false };
 		pi.setActiveTools(restore);
 		pi.appendEntry(STATE_TYPE, state);
-		ctx.ui.setStatus("pi-red-plan", undefined);
-		ctx.ui.notify("pi-red: plan mode off", "info");
+		ctx.ui.setStatus("pi-rad-plan", undefined);
+		ctx.ui.notify("pi-rad: plan mode off", "info");
 	};
 
 	pi.on("session_start", async (_event, ctx) => {
@@ -88,29 +88,29 @@ export default function (pi: ExtensionAPI) {
 			state = last;
 			const available = allToolNames();
 			pi.setActiveTools(planToolsFor(available));
-			ctx.ui.setStatus("pi-red-plan", "plan");
+			ctx.ui.setStatus("pi-rad-plan", "plan");
 		}
 	});
 
 	pi.on("before_agent_start", async (event) => {
 		if (!isEnabled("plan-mode") || !state.active) return undefined;
-		if (event.systemPrompt.includes("Plan mode (pi-red) is active")) return undefined;
+		if (event.systemPrompt.includes("Plan mode (pi-rad) is active")) return undefined;
 		return { systemPrompt: `${event.systemPrompt}\n\n${PLAN_INSTRUCTIONS}` };
 	});
 
 	pi.on("tool_call", async (event) => {
 		if (!isEnabled("plan-mode") || !state.active) return undefined;
 		if (BLOCKED_TOOLS.has(event.toolName)) {
-			return { block: true, reason: "pi-red plan mode is read-only; exit with /plan to make changes" };
+			return { block: true, reason: "pi-rad plan mode is read-only; exit with /plan to make changes" };
 		}
 		return undefined;
 	});
 
 	pi.registerCommand("plan", {
-		description: "Toggle pi-red plan mode (read-only planning)",
+		description: "Toggle pi-rad plan mode (read-only planning)",
 		handler: async (_args, ctx) => {
 			if (!isEnabled("plan-mode")) {
-				ctx.ui.notify("pi-red: plan-mode feature is off (enable with /red plan-mode on)", "warning");
+				ctx.ui.notify("pi-rad: plan-mode feature is off (enable with /rad plan-mode on)", "warning");
 				return;
 			}
 			if (state.active) disable(ctx);
@@ -119,7 +119,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerShortcut("ctrl+alt+p", {
-		description: "Toggle pi-red plan mode",
+		description: "Toggle pi-rad plan mode",
 		handler: async (ctx) => {
 			if (!isEnabled("plan-mode")) return;
 			if (state.active) disable(ctx);

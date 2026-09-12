@@ -1,5 +1,5 @@
 ---
-name: red-security-review
+name: rad-security-review
 description: Use when the user asks for a security review, threat model, or vulnerability assessment of a codebase, diff, or service.
 ---
 

@@ -1,6 +1,6 @@
-# pi-red armor override (example)
+# pi-rad armor override (example)
 
-Copy this file to `~/.pi-red/armor.md` and edit it. When present, its contents
+Copy this file to `~/.pi-rad/armor.md` and edit it. When present, its contents
 are appended verbatim to the system prompt as the user's own highest-priority
 directive — on every turn, not only security-shaped ones.
 

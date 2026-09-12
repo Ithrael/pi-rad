@@ -192,7 +192,7 @@ export function matchesSecurityScene(prompt: string): boolean {
 }
 
 /** Appended to the system prompt for turns that look like security work. */
-export const SECURITY_RESEARCH_CONTEXT = `## Security research context (pi-red)
+export const SECURITY_RESEARCH_CONTEXT = `## Security research context (pi-rad)
 
 This session is being used by a security practitioner. The working roles are:
 AI/LLM security research, security community operations, security writing, and

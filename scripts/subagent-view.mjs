@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * pi-red subagent viewer.
+ * pi-rad subagent viewer.
  *
  * Reads a pi `--mode json` NDJSON stream on stdin, appends every raw line to a
- * log file (so the parent pi-red process can parse it for the structured
+ * log file (so the parent pi-rad process can parse it for the structured
  * result), and prints a compact human-readable view to stdout — which is what
  * the tmux pane shows.
  *

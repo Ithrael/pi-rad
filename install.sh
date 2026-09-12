@@ -2,7 +2,7 @@
 #
 # pi-rad installer
 #
-#   curl -fsSL https://raw.githubusercontent.com/ithrael/pi-rad/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ithrael/pi-rad/master/install.sh | bash
 #
 # Options:
 #   --dev            install the current checkout in place (no copy)
@@ -100,7 +100,7 @@ if [[ "$DEV" == "0" ]]; then
 		info "downloading from $REPO"
 		TMP_DIR="$(mktemp -d)"
 		ARCHIVE="$TMP_DIR/pi-rad.tar.gz"
-		URL="$REPO/archive/refs/heads/main.tar.gz"
+		URL="$REPO/archive/HEAD.tar.gz"
 		if ! curl -fsSL "$URL" -o "$ARCHIVE"; then
 			die "download failed: $URL (set PI_RAD_REPO to override)"
 		fi

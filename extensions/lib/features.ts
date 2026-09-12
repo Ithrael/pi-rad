@@ -68,6 +68,11 @@ export const FEATURES: readonly FeatureDef[] = [
 		default: true,
 	},
 	{
+		id: "findings",
+		desc: "Findings ledger: gated candidate writes with cross-target dedupe (/findings)",
+		default: true,
+	},
+	{
 		id: "statusline",
 		desc: "Show pi-rad feature status in the footer",
 		default: true,

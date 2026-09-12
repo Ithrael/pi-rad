@@ -69,6 +69,7 @@ pi-rad                 # 带 pi-rad 启动 pi
 /goal <text>           # 目标模式：不完成不停止
 /agents                # 列出 subagent 可用的代理
 /armor                 # 破甲状态：标记数、override、上次剔除数
+/findings              # 漏洞台账：计数、闸门失败分布、跨目标同族指纹
 ```
 
 ## 功能
@@ -77,10 +78,11 @@ pi-rad                 # 带 pi-rad 启动 pi
 
 | 功能 | 说明 |
 |------|------|
-| **子代理 Subagents** | `subagent` 工具，把任务委派给隔离的 `pi` 进程：单个、并行（最多 4 个）、或链式（`{previous}` 引用上一步输出）。每个子代理有独立上下文窗口、工具、模型和系统提示词。传 `tmux: true` 可让每个子代理跑在独立的 tmux 窗口里，随时切过去看。 |
+| **子代理 Subagents** | *默认关闭。* 需要更强的能力请装 [`pi-subagents`](https://www.npmjs.com/package/pi-subagents)（`pi install npm:pi-subagents`）：后台运行、FleetView 检视器、运行中插话、missions、内置 agent。pi-rad 自带一个零依赖替代实现：`subagent` 工具，把任务委派给隔离的 `pi` 进程，单个 / 并行（最多 4 个）/ 链式（`{previous}`）。用 `/rad subagents on` 开启。两者不要同时启用：pi 会先加载 pi-rad，然后**整个** `pi-subagents` 扩展都会被拒绝加载（`Tool "subagent" conflicts with …`）。→ [子代理文件](#子代理文件) |
 | **计划模式 Plan mode** | 只读规划姿态：限制工具集、注入规划指令、硬拦截 `edit`/`write`。`/plan` 或 `ctrl+alt+p` 切换，状态跨 resume 保留。 |
 | **目标模式 Goal mode** | `/goal <text>` 把一个需求变成完成契约。每次 agent 停下来时，pi-rad 会重新催促它继续，直到它带着证据调用 `goal_complete`（或带阻碍调用 `goal_blocked`）。受迭代预算约束。 |
 | **内置代理** | `scout`、`planner`、`worker`、`reviewer`、`sec-auditor`。 |
+| **漏洞台账 Findings ledger** | `finding` 工具：每个候选都过闸（前置条件 / 真实危害 / 证据 / 去重 / 平台规则）后记录为漏洞或 near-miss。一个 append-only 台账代替手写 JSON，并把跨目标的同族指纹翻出来。→ [漏洞台账](#漏洞台账-findings-ledger) |
 | **提示词模板** | `/rad-review`、`/rad-harden`、`/rad-deep`。 |
 | **技能** | `rad-security-review`，按需加载的安全审计工作流。 |
 | **主题** | `pi-rad` 红色主题，会话启动即生效，一眼就能看出 pi-rad 已加载。仅作用于当前会话（不会改写 `settings.json` 里的 `theme`），显式传入 `--use-theme` / `--theme` / `--no-themes` 时以命令行参数为准。 |
@@ -182,6 +184,44 @@ ClawGod 的做法是用正则改 Claude Code 本地 bundle，把客户端注入�
 模型厂商服务端的策略与安全分类器不在 pi 能触及的范围内，既不能绕过也不声称绕过。
 指令里也明确写了这一点，并保留授权边界、要求攻防配对。
 
+### 漏洞台账 Findings ledger
+
+SRC 的成败只看交出去什么，所以 pi-rad 给每个挖洞候选留一条规范记录。`finding`
+工具先跑提交闸，再追加写入台账：会话 cwd 下的 `findings.jsonl`，或用
+`$PI_RAD_FINDINGS` 指定。它**不重写**已有的 `vulns.json` / `near-miss.json`——
+台账是增量文件，由 `/findings` 读回。
+
+闸门按顺序跑，全过才算漏洞：
+
+| 闸门 | 通过条件 |
+|------|----------|
+| `preCondition` | 给出了 `provenance.interface`、`provenance.param` 和非空的 `provenance.exploitChain` |
+| `realImpact` | `realImpact` 属于 `pii_leak`、`credentials`、`rce`、`cross_user_confirmed`、`confirmed_oob`、`tool_action`（`possible` 这类自由文本直接拒）；`scaleEstimate` 属于 `1M+`、`100K+`、`10K+`、`single`；批量数据类影响不能是 `single` |
+| `evidence` | `evidenceRuns >= 3` 且 `reproducibility` 为 `3/3` |
+| `dedup` | 目标 + 类型 + 端点 + 参数 + payload 的指纹未作为漏洞记录过 |
+| `platform` | `~/.pi-rad/gate.json` 里的 `rejectPatterns` 没有命中类型、标题或端点 |
+
+全过记 `VULN-<指纹>`；任一不过记 `NM-<指纹>`，并在 `gateFailed` 写明是哪道闸、
+`gateReason` 说明缺什么。于是「候选先进 near-miss 再升档」的流程不变，但不再有
+字段名各写一套的手写 JSON。
+
+同一指纹重复提交会被判为重复而拒绝；把缺的字段补齐后再记一次，则会**升级**原来
+的 near-miss（`promotes: NM-…`）而不是新增重复条目。同一手法打在另一个目标上会
+照记，并打上 `duplicateOf` 标记——散在几十个 App 里的同一模式从此可见。
+
+可选的平台拒收规则，让「默认关闭」清单是被**执行**的而不是被记住的：
+
+```bash
+cp gate.example.json ~/.pi-rad/gate.json
+```
+
+```json
+{ "rejectPatterns": ["cors", "self-xss", "system prompt", "rate limit"] }
+```
+
+`/findings` 输出台账摘要：总数、`gateFailed` 分布、最高频的阻塞原因，以及跨目标
+同族指纹。
+
 ## 配置
 
 首次安装会生成 `~/.pi-rad/patches.json`。未列出的功能按默认值，每个功能都可以用
@@ -280,9 +320,10 @@ pi-rad/
 ├── extensions/          # pi 自动发现
 │   ├── rad-core.ts      # 功能开关、/rad、安全语境、lean、guard
 │   ├── rad-armor.ts     # 客户端指令剔除 + /armor
-│   ├── rad-subagent.ts  # subagent 工具 + /agents
+│   ├── rad-subagent.ts  # 自带 subagent 工具 + /agents（默认关闭）
 │   ├── rad-plan.ts      # 计划模式 + /plan
 │   ├── rad-goal.ts      # 目标模式 + /goal + goal_complete/goal_blocked
+│   ├── rad-finding.ts   # 漏洞台账 + 提交闸 + /findings
 │   └── lib/             # 无依赖的共享逻辑
 ├── scripts/
 │   ├── patch-settings.mjs

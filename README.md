@@ -73,6 +73,7 @@ pi-rad                 # launch pi with pi-rad enabled
 /goal <text>           # goal mode: keep working until the goal is done
 /agents                # list agents available to the subagent tool
 /armor                 # armor status: markers, override, last scrub
+/findings              # findings ledger: counts, gate failures, duplicate families
 ```
 
 ## What it does
@@ -81,10 +82,11 @@ pi-rad                 # launch pi with pi-rad enabled
 
 | Feature | What you get |
 |---------|--------------|
-| **Subagents** | A `subagent` tool that delegates work to isolated `pi` processes — single, parallel (max 4), or chained with `{previous}`. Each subagent gets its own context window, tools, model, and system prompt. Pass `tmux: true` to run each one in a tmux window you can switch to and watch live. |
+| **Subagents** | *Off by default.* Install [`pi-subagents`](https://www.npmjs.com/package/pi-subagents) (`pi install npm:pi-subagents`) for the richer option — background runs, FleetView, mid-run steering, missions, builtin agents. pi-rad ships a zero-dependency alternative: a `subagent` tool that delegates to isolated `pi` processes, single / parallel (max 4) / chained with `{previous}`. Enable with `/rad subagents on`. Do not enable both: pi loads pi-rad first and then refuses to load the `pi-subagents` extension entirely (`Tool "subagent" conflicts with …`). → [Subagent agents](#subagent-agents) |
 | **Plan mode** | A read-only planning posture: the tool set is restricted, planning instructions are injected, and `edit`/`write` are hard-blocked. Toggle with `/plan` or `ctrl+alt+p`; state persists across resume. |
 | **Goal mode** | `/goal <text>` turns a request into a completion contract. On every settle, pi-rad re-prompts the agent to continue until it calls `goal_complete` with evidence (or `goal_blocked` with a blocker). Bounded by an iteration budget. |
 | **Bundled agents** | `scout`, `planner`, `worker`, `reviewer`, and `sec-auditor` — battle-tested personas for delegation. |
+| **Findings ledger** | A `finding` tool that gates every hunt candidate (precondition, real impact, evidence, dedupe, platform rules) and records it as a vuln or a near-miss. One append-only ledger instead of hand-written JSON, with cross-target duplicate families surfaced. → [Findings ledger](#findings-ledger) |
 | **Prompt templates** | `/rad-review`, `/rad-harden`, and `/rad-deep` for review, threat modeling, and subagent-driven research. |
 | **Skill** | `rad-security-review` — a repeatable security-review workflow loaded on demand. |
 | **Theme** | `pi-rad` — a red-accented theme applied as soon as a session starts, so an active pi-rad is visible at a glance. Per-session only (it never rewrites `theme` in `settings.json`), and an explicit `--use-theme` / `--theme` / `--no-themes` flag wins. |
@@ -197,6 +199,49 @@ classifiers live on the model vendor's servers, are not reachable from pi, and
 are neither bypassed nor claimed to be. The directive says so explicitly, keeps
 an authorization boundary, and requires offense paired with defense.
 
+### Findings ledger
+
+Submission work is judged by what actually gets submitted, so pi-rad keeps one
+canonical record per hunt candidate. The `finding` tool runs the submission gate
+and appends to a ledger — `findings.jsonl` in the session cwd, or the path in
+`$PI_RAD_FINDINGS`. It never rewrites an existing `vulns.json` /
+`near-miss.json`; the ledger is additive, and `/findings` reads it back.
+
+Gate order, all of which must pass for a vuln record:
+
+| Gate | Passes when |
+|------|-------------|
+| `preCondition` | `provenance.interface`, `provenance.param`, and a non-empty `provenance.exploitChain` are given |
+| `realImpact` | `realImpact` is one of `pii_leak`, `credentials`, `rce`, `cross_user_confirmed`, `confirmed_oob`, `tool_action` (free text such as `possible` is rejected), `scaleEstimate` is one of `1M+`, `100K+`, `10K+`, `single`, and a bulk-data impact is not `single` |
+| `evidence` | `evidenceRuns >= 3` and `reproducibility` is `3/3` |
+| `dedup` | target + type + endpoint + param + payload has not already been recorded as a vuln |
+| `platform` | no `rejectPatterns` rule from `~/.pi-rad/gate.json` matches the type, title, or endpoint |
+
+Passing every gate records a `VULN-<fingerprint>`; failing one records
+`NM-<fingerprint>` with `gateFailed` naming the gate and `gateReason` saying what
+is missing. That keeps the usual flow — candidates land as near-misses first —
+without hand-written JSON whose field names drift between modules.
+
+Recording the same fingerprint again is refused as a duplicate. Recording it
+*with the missing field filled in* promotes the near-miss instead
+(`promotes: NM-…`). The same technique against a different target is recorded
+and tagged `duplicateOf`, so a pattern reported across dozens of apps is
+visible rather than silent.
+
+Optional refusal rules, so the "default off" list is enforced instead of
+remembered:
+
+```bash
+cp gate.example.json ~/.pi-rad/gate.json
+```
+
+```json
+{ "rejectPatterns": ["cors", "self-xss", "system prompt", "rate limit"] }
+```
+
+`/findings` prints counts, the `gateFailed` histogram, the most common blocking
+reasons, and cross-target duplicate families.
+
 ## Configuration
 
 `~/.pi-rad/patches.json` is created on first install. A feature is on unless the
@@ -302,9 +347,10 @@ pi-rad/
 ├── extensions/          # pi auto-discovers these
 │   ├── rad-core.ts      # feature gates, /rad, security framing, lean, guard
 │   ├── rad-armor.ts     # client-side directive surgery + /armor
-│   ├── rad-subagent.ts  # subagent tool + /agents
+│   ├── rad-subagent.ts  # built-in subagent tool + /agents (off by default)
 │   ├── rad-plan.ts      # plan mode + /plan
 │   ├── rad-goal.ts      # goal mode + /goal + goal_complete/goal_blocked
+│   ├── rad-finding.ts   # findings ledger + submission gate + /findings
 │   └── lib/             # shared, dependency-free helpers
 ├── scripts/
 │   ├── patch-settings.mjs

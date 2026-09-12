@@ -30,6 +30,7 @@
 		"agents",
 		"armor.example.json",
 		"armor.example.md",
+		"gate.example.json",
 		"bin",
 		"extensions",
 		"prompts",

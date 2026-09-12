@@ -204,6 +204,33 @@ await scenario("doctor", async () => {
 	return hasTheme ? { detail: content.split("\n")[0] } : { status: "FAIL", detail: "doctor output missing fields" };
 });
 
+await scenario("findings", async (session) => {
+	const dir = mkdtempSync(join(tmpdir(), "pi-rad-findings-"));
+	const ledger = join(dir, "findings.jsonl");
+	try {
+		const instance = session([], { PI_RAD_FINDINGS: ledger });
+		instance.prompt(
+			'Call the finding tool with exactly these three parameters: title="未授权访问用户资料", ' +
+				'type="unauth-api", target="api.example.com". Do not invent other fields. ' +
+				"Then reply with the tool result verbatim.",
+		);
+		await instance.waitFor(
+			(e) => e.type === "tool_execution_end" && e.toolName === "finding",
+			150_000,
+			"finding tool call",
+		);
+		if (!existsSync(ledger)) return { status: "FAIL", detail: "ledger was not written" };
+		const record = readFileSync(ledger, "utf-8").trim();
+		const parsed = JSON.parse(record);
+		const gated = parsed.status === "near-miss" && parsed.gateFailed === "preCondition";
+		return gated
+			? { detail: `${parsed.id} gated on preCondition` }
+			: { status: "FAIL", detail: `unexpected record: ${record.slice(0, 120)}` };
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 await scenario("armor", async () => {
 	const dir = mkdtempSync(join(tmpdir(), "pi-rad-smoke-"));
 	const probePath = join(dir, "probe.ts");

@@ -1,0 +1,12 @@
+{
+  "rejectPatterns": [
+    "cors",
+    "self-xss",
+    "http method",
+    "host header",
+    "system prompt",
+    "graphql introspection",
+    "rate limit",
+    "username enum"
+  ]
+}

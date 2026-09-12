@@ -1,0 +1,14 @@
+{
+  "sec-research": true,
+  "armor": true,
+  "auto-trust": true,
+  "attribution-off": true,
+  "subagents": true,
+  "plan-mode": true,
+  "goal": true,
+  "statusline": true,
+  "theme": true,
+  "lean": false,
+  "lean-max": false,
+  "guard": false
+}

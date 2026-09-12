@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# pi-red launcher (repo copy).
+#
+# Runs pi with pi-red enabled. If pi-red is not yet registered in pi's global
+# settings, it registers the checkout first (self-healing, like ClawGod's
+# auto re-patch after an upgrade).
+#
+# The installer writes its own launcher that hard-codes the install directory;
+# this copy is for running straight from a git checkout.
+
+set -euo pipefail
+
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+PI_RED_HOME="${PI_RED_HOME:-$SELF_DIR}"
+SETTINGS="${PI_AGENT_DIR:-$HOME/.pi/agent}/settings.json"
+
+if ! command -v pi >/dev/null 2>&1; then
+	echo "pi-red: pi is not installed or not on PATH" >&2
+	exit 127
+fi
+
+# Self-heal the package registration.
+if [[ "${PI_RED_NO_SELFHEAL:-0}" != "1" ]]; then
+	if [[ ! -f "$SETTINGS" ]] || ! grep -qF "\"$PI_RED_HOME\"" "$SETTINGS" 2>/dev/null; then
+		pi install "$PI_RED_HOME" >/dev/null 2>&1 || true
+	fi
+fi
+
+export PI_RED=1
+export PI_RED_HOME
+exec pi "$@"

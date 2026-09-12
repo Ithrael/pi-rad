@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>pi-red — god mode for pi</title>
+		<meta
+			name="description"
+			content="pi-red is a pi package that adds subagents, plan mode, lean tooling, security-research framing, and a /red control panel to the pi coding agent."
+		/>
+		<style>
+			:root {
+				--bg: #0f0e11;
+				--panel: #17151a;
+				--panel-2: #1e1b22;
+				--border: #2c2730;
+				--text: #e8e4e6;
+				--muted: #a49ca6;
+				--red: #e05561;
+				--bright: #ff6b6b;
+				--green: #b5bd68;
+				--mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background:
+					radial-gradient(900px 500px at 50% -10%, rgba(224, 85, 97, 0.16), transparent 60%),
+					var(--bg);
+				color: var(--text);
+				font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			}
+			main {
+				max-width: 880px;
+				margin: 0 auto;
+				padding: 72px 24px 96px;
+			}
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				font-weight: 700;
+				letter-spacing: -0.02em;
+			}
+			.logo {
+				width: 34px;
+				height: 34px;
+				border-radius: 10px;
+				background: linear-gradient(145deg, var(--bright), #8c1d2a);
+				box-shadow: 0 0 28px rgba(224, 85, 97, 0.45);
+			}
+			h1 {
+				font-size: clamp(34px, 6vw, 56px);
+				line-height: 1.05;
+				letter-spacing: -0.03em;
+				margin: 40px 0 16px;
+			}
+			h1 span {
+				color: var(--red);
+			}
+			.lede {
+				color: var(--muted);
+				font-size: 18px;
+				max-width: 62ch;
+			}
+			.install {
+				margin: 32px 0 8px;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 16px;
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 14px 18px;
+				font-family: var(--mono);
+				font-size: 14px;
+			}
+			.install code {
+				color: var(--text);
+				overflow-x: auto;
+				white-space: nowrap;
+			}
+			button {
+				background: var(--red);
+				color: #fff;
+				border: 0;
+				border-radius: 8px;
+				padding: 8px 14px;
+				font: inherit;
+				font-size: 13px;
+				cursor: pointer;
+			}
+			button:hover {
+				background: var(--bright);
+			}
+			h2 {
+				font-size: 13px;
+				text-transform: uppercase;
+				letter-spacing: 0.12em;
+				color: var(--muted);
+				margin: 56px 0 16px;
+			}
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+				gap: 14px;
+			}
+			.card {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 18px;
+			}
+			.card h3 {
+				margin: 0 0 6px;
+				font-size: 15px;
+				color: var(--bright);
+			}
+			.card p {
+				margin: 0;
+				color: var(--muted);
+				font-size: 14px;
+			}
+			pre {
+				background: var(--panel-2);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 18px;
+				overflow-x: auto;
+				font-family: var(--mono);
+				font-size: 13.5px;
+			}
+			pre .c {
+				color: #6d6570;
+			}
+			pre .k {
+				color: var(--bright);
+			}
+			footer {
+				margin-top: 64px;
+				padding-top: 24px;
+				border-top: 1px solid var(--border);
+				color: var(--muted);
+				font-size: 14px;
+			}
+			footer a {
+				color: var(--red);
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<div class="brand"><div class="logo"></div> pi-red</div>
+
+			<h1>God mode for <span>pi</span>.</h1>
+			<p class="lede">
+				A pi package that adds the power-user features pi leaves out — isolated subagents, read-only plan
+				mode, lean tool sets, and security-research framing — without forking pi. Install once; it survives
+				<code>pi update</code>.
+			</p>
+
+			<div class="install">
+				<code id="cmd">git clone https://github.com/ithrael/pi-red &amp;&amp; cd pi-red &amp;&amp; bash install.sh</code>
+				<button id="copy">Copy</button>
+			</div>
+
+			<h2>Feature unlocks</h2>
+			<div class="grid">
+				<div class="card">
+					<h3>Subagents</h3>
+					<p>
+						Delegate to isolated pi processes in single, parallel, or chained mode. Their own context
+						window, tools, and model.
+					</p>
+				</div>
+				<div class="card">
+					<h3>Plan mode</h3>
+					<p>
+						A read-only planning posture with edit/write hard-blocked. Toggle with /plan or ctrl+alt+p.
+					</p>
+				</div>
+				<div class="card">
+					<h3>Lean tools</h3>
+					<p>Trim redundant exploration tools, or go minimal with read/bash/edit/write only.</p>
+				</div>
+				<div class="card">
+					<h3>Security research framing</h3>
+					<p>
+						Recognizes CTF, vuln research, and authorized pentest work and frames it correctly so the
+						model does the work.
+					</p>
+				</div>
+				<div class="card">
+					<h3>Auto trust</h3>
+					<p>Skip the project trust prompt and remember the decision.</p>
+				</div>
+				<div class="card">
+					<h3>Attribution off</h3>
+					<p>Strip provider attribution and tracking headers from outgoing requests.</p>
+				</div>
+			</div>
+
+			<h2>Try it</h2>
+			<pre><span class="c"># install, then launch with pi-red enabled</span>
+pi-red
+
+<span class="c"># control panel and diagnostics</span>
+/red
+/red-doctor
+
+<span class="c"># plan mode and subagents</span>
+/plan
+/agents</pre>
+
+			<footer>
+				MIT licensed. <a href="https://pi.dev">pi</a> is a project of its respective authors. Not
+				affiliated.
+			</footer>
+		</main>
+
+		<script>
+			const copy = document.getElementById("copy");
+			copy.addEventListener("click", async () => {
+				await navigator.clipboard.writeText(document.getElementById("cmd").textContent.trim());
+				copy.textContent = "Copied";
+				setTimeout(() => (copy.textContent = "Copy"), 1500);
+			});
+		</script>
+	</body>
+</html>

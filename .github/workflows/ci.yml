@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Shell syntax
+        run: |
+          bash -n install.sh
+          bash -n bin/pi-red
+
+      - name: patch-settings smoke test
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pi-agent
+          printf '{"theme":"dark"}\n' > /tmp/pi-agent/settings.json
+          node scripts/patch-settings.mjs /tmp/pi-agent/settings.json \
+            --set-if-absent defaultProjectTrust=always \
+            --set-if-absent enableInstallTelemetry=false \
+            --set-if-absent theme=pi-red
+          grep -q '"defaultProjectTrust": "always"' /tmp/pi-agent/settings.json
+          grep -q '"theme": "dark"' /tmp/pi-agent/settings.json
+          grep -q '"enableInstallTelemetry": false' /tmp/pi-agent/settings.json

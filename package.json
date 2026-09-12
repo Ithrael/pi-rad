@@ -1,0 +1,40 @@
+{
+	"name": "pi-red",
+	"version": "0.1.0",
+	"description": "God mode for pi — feature unlocks, restriction removal, subagents, plan mode, and lean tooling.",
+	"type": "module",
+	"license": "MIT",
+	"keywords": [
+		"pi-package",
+		"pi",
+		"coding-agent",
+		"godmode",
+		"subagents",
+		"plan-mode"
+	],
+	"bin": {
+		"pi-red": "bin/pi-red"
+	},
+	"files": [
+		"agents",
+		"armor.example.json",
+		"armor.example.md",
+		"bin",
+		"extensions",
+		"prompts",
+		"scripts",
+		"skills",
+		"subagents.example.json",
+		"themes",
+		"install.sh",
+		"README.md",
+		"README_ZH.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"test": "node --test tests/*.test.mjs"
+	},
+	"engines": {
+		"node": ">=22.0.0"
+	}
+}

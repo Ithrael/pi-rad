@@ -1,0 +1,9 @@
+{
+	"paragraphMarkers": [
+		"IMPORTANT: Assist with authorized security testing",
+		"You must NEVER generate or guess URLs",
+		"Not logged in. Run"
+	],
+	"sectionHeadings": ["# Executing actions with care", "## Executing actions with care"],
+	"regexes": ["refuse to (?:help|assist|provide)[^\\n]*cyber[^\\n]*"]
+}

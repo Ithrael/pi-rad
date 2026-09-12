@@ -109,21 +109,29 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("plan", {
 		description: "Toggle pi-rad plan mode (read-only planning)",
 		handler: async (_args, ctx) => {
+			// Leaving plan mode must work even when the feature was turned off at
+			// runtime, otherwise the read-only tool set stays applied.
+			if (state.active) {
+				disable(ctx);
+				return;
+			}
 			if (!isEnabled("plan-mode")) {
 				ctx.ui.notify("pi-rad: plan-mode feature is off (enable with /rad plan-mode on)", "warning");
 				return;
 			}
-			if (state.active) disable(ctx);
-			else enable(ctx);
+			enable(ctx);
 		},
 	});
 
 	pi.registerShortcut("ctrl+alt+p", {
 		description: "Toggle pi-rad plan mode",
 		handler: async (ctx) => {
+			if (state.active) {
+				disable(ctx);
+				return;
+			}
 			if (!isEnabled("plan-mode")) return;
-			if (state.active) disable(ctx);
-			else enable(ctx);
+			enable(ctx);
 		},
 	});
 }

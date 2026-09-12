@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 
+import { makeCtx, makePi } from "./support/fake-pi.mjs";
+
 // rad-goal.ts runtime-imports typebox; stub it so the module loads under Node.
 register("./support/typebox-loader.mjs", import.meta.url);
 
@@ -27,36 +29,6 @@ after(() => {
 	else process.env.PI_RAD_GOAL_MAX = ORIGINAL_MAX;
 	rmSync(sandbox, { recursive: true, force: true });
 });
-
-function makePi() {
-	const handlers = new Map();
-	const tools = new Map();
-	const commands = new Map();
-	const pi = {
-		on: (event, handler) => handlers.set(event, handler),
-		registerTool: (tool) => tools.set(tool.name, tool),
-		registerCommand: (name, options) => commands.set(name, options),
-		sendMessage: () => {},
-		sendUserMessage: () => {},
-		appendEntry: () => {},
-	};
-	return { pi, handlers, tools, commands };
-}
-
-function makeCtx() {
-	const statuses = new Map();
-	const ctx = {
-		mode: "tui",
-		ui: {
-			setStatus: (key, value) => statuses.set(key, value),
-			notify: () => {},
-		},
-		sessionManager: { getEntries: () => [] },
-		isIdle: () => true,
-		hasPendingMessages: () => false,
-	};
-	return { ctx, statuses };
-}
 
 describe("goal mode", () => {
 	it("registers its tools and command when enabled", () => {

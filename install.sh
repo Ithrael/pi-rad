@@ -8,10 +8,24 @@
 #   --dev            install the current checkout in place (no copy)
 #   --dir DIR        install directory (default: $PI_RAD_HOME or ~/.pi-rad)
 #   --bin DIR        directory for the `pi-rad` launcher (default: ~/.local/bin)
-#   --no-settings    do not touch ~/.pi/agent/settings.json
+#   --no-settings    do not touch settings.json or the MCP config
+#   --skills DIR     also load skills from DIR (repeatable)
+#   --mcp-config F   also register the MCP servers in file F (repeatable)
+#   --hunt FILE      apply a hunt setup file (default: $CONFIG_HOME/hunt.json)
+#   --no-hunt        ignore the default hunt.json
 #   --uninstall      unregister pi-rad and remove the launcher
 #   --purge          with --uninstall, also delete the install directory
 #   --help
+#
+# Hunt setup (one declarative file, so a second machine needs no hand editing):
+#   {
+#     "skills": ["~/code/.../skills"],
+#     "mcpServers": { "asc": { "command": "python", "args": [".../mcp_server.py"] } },
+#     "piPackages": ["npm:pi-mcp-adapter"]
+#   }
+# Files under the install directory that hold your own state (patches.json,
+# gate.json, armor.json, subagents.json, hunt.json, the Playwright profile)
+# survive a reinstall.
 #
 # Environment:
 #   PI_RAD_HOME      install directory
@@ -33,8 +47,15 @@ MODE="install"
 DEV=0
 TOUCH_SETTINGS=1
 PURGE=0
+NO_HUNT=0
+HUNT_FILE=""
+HUNT_FILE_EXPLICIT=0
+PASSTHROUGH=()
 INSTALL_DIR="${PI_RAD_HOME:-$HOME/.pi-rad}"
 BIN_DIR="${PI_RAD_BIN_DIR:-$HOME/.local/bin}"
+
+# User state inside the install directory; protected from rsync --delete.
+CONFIG_KEEP=(patches.json gate.json hunt.json armor.json armor.md subagents.json playwright-profile)
 
 if [[ -t 1 ]]; then
 	BOLD="$(printf '\033[1m')"; DIM="$(printf '\033[2m')"; RED="$(printf '\033[31m')"
@@ -48,7 +69,7 @@ warn() { printf '%s\n' "${YELLOW}warning:${RESET} $*" >&2; }
 die() { printf '%s\n' "${RED}error:${RESET} $*" >&2; exit 1; }
 
 usage() {
-	sed -n '2,20p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//' || true
+	sed -n '2,33p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//' || true
 }
 
 while [[ $# -gt 0 ]]; do
@@ -57,6 +78,10 @@ while [[ $# -gt 0 ]]; do
 		--dir) INSTALL_DIR="$2"; shift 2 ;;
 		--bin) BIN_DIR="$2"; shift 2 ;;
 		--no-settings) TOUCH_SETTINGS=0; shift ;;
+		--skills) PASSTHROUGH+=(--skills "$2"); shift 2 ;;
+		--mcp-config) PASSTHROUGH+=(--mcp-config "$2"); shift 2 ;;
+		--hunt) HUNT_FILE="$2"; HUNT_FILE_EXPLICIT=1; NO_HUNT=0; shift 2 ;;
+		--no-hunt) NO_HUNT=1; HUNT_FILE=""; HUNT_FILE_EXPLICIT=0; shift ;;
 		--uninstall) MODE="uninstall"; shift ;;
 		--purge) PURGE=1; shift ;;
 		--help|-h) usage; exit 0 ;;
@@ -112,12 +137,14 @@ if [[ "$DEV" == "0" ]]; then
 	if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
 		info "installing to $INSTALL_DIR"
 		mkdir -p "$INSTALL_DIR"
+		EXCLUDES=()
+		for keep in .git node_modules "${CONFIG_KEEP[@]}"; do
+			EXCLUDES+=("--exclude=$keep")
+		done
 		if command -v rsync >/dev/null 2>&1; then
-			rsync -a --delete --exclude '.git' --exclude 'node_modules' --exclude 'patches.json' \
-				"$SOURCE_DIR/" "$INSTALL_DIR/"
+			rsync -a --delete "${EXCLUDES[@]}" "$SOURCE_DIR/" "$INSTALL_DIR/"
 		else
-			(cd "$SOURCE_DIR" && tar --exclude='.git' --exclude='node_modules' --exclude='patches.json' -cf - .) \
-				| (cd "$INSTALL_DIR" && tar -xf -)
+			(cd "$SOURCE_DIR" && tar "${EXCLUDES[@]}" -cf - .) | (cd "$INSTALL_DIR" && tar -xf -)
 		fi
 	else
 		info "already installed at $INSTALL_DIR"
@@ -144,9 +171,10 @@ if [[ ! -f "$CONFIG_HOME/patches.json" ]]; then
   "armor": true,
   "auto-trust": true,
   "attribution-off": true,
-  "subagents": true,
+  "subagents": false,
   "plan-mode": true,
   "goal": true,
+  "findings": true,
   "statusline": true,
   "theme": true,
   "lean": false,
@@ -167,6 +195,36 @@ if [[ "$TOUCH_SETTINGS" == "1" && -f "$INSTALL_DIR/scripts/patch-settings.mjs" ]
 			|| warn "could not update $SETTINGS"
 	else
 		warn "node not found; skipping settings tweaks (defaultProjectTrust, telemetry, theme)"
+	fi
+fi
+
+# ── hunt setup: extra skills, MCP servers, pi packages ───────────────
+# One declarative file makes the wiring reproducible: see --skills /
+# --mcp-config / --hunt in the header.
+if [[ "$TOUCH_SETTINGS" == "0" ]]; then
+	if [[ ${#PASSTHROUGH[@]} -gt 0 || -n "$HUNT_FILE" ]]; then
+		warn "--no-settings: skipping the skills/MCP wiring"
+	fi
+elif [[ -f "$INSTALL_DIR/scripts/apply-hunt.mjs" ]]; then
+	if [[ "$NO_HUNT" == "0" && -z "$HUNT_FILE" ]]; then
+		HUNT_FILE="$CONFIG_HOME/hunt.json"
+	fi
+	HUNT_ARG=()
+	if [[ -n "$HUNT_FILE" && -f "$HUNT_FILE" ]]; then
+		HUNT_ARG=(--hunt "$HUNT_FILE")
+	elif [[ -n "$HUNT_FILE" && "$HUNT_FILE_EXPLICIT" == "1" ]]; then
+		warn "hunt file not found (ignored): $HUNT_FILE"
+	fi
+	if [[ ${#HUNT_ARG[@]} -gt 0 || ${#PASSTHROUGH[@]} -gt 0 ]]; then
+		if command -v node >/dev/null 2>&1; then
+			MCP_TARGET="${PI_RAD_MCP_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/mcp/mcp.json}"
+			node "$INSTALL_DIR/scripts/apply-hunt.mjs" \
+				--settings "$SETTINGS" --mcp-target "$MCP_TARGET" \
+				"${HUNT_ARG[@]}" "${PASSTHROUGH[@]}" \
+				|| warn "could not apply the hunt setup"
+		else
+			warn "node not found; skipping skills/MCP wiring"
+		fi
 	fi
 fi
 

@@ -73,3 +73,71 @@ jobs:
 
           bash install.sh --dir "$tmp/install" --bin "$tmp/bin" --uninstall --purge
           test ! -d "$tmp/install"
+
+      - name: install.sh hunt wiring smoke test
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/bin" "$tmp/agent"
+          printf '{}\n' > "$tmp/agent/settings.json"
+          # fake pi: logs calls, and remembers what it installed so idempotency is testable
+          cat > "$tmp/bin/pi" <<'SH'
+          #!/usr/bin/env bash
+          printf '%s %s\n' "$1" "$2" >> "$PI_LOG"
+          if [[ "$1" == "list" ]]; then
+            [[ -f "$PI_STATE" ]] && cat "$PI_STATE"
+          elif [[ "$1" == "install" ]]; then
+            printf '%s\n' "$2" >> "$PI_STATE"
+          fi
+          SH
+          chmod +x "$tmp/bin/pi"
+          export PI_LOG="$tmp/pi.log" PI_STATE="$tmp/installed.txt" PI_AGENT_DIR="$tmp/agent"
+          export PI_RAD_MCP_CONFIG="$tmp/mcp/mcp.json"
+          export PATH="$tmp/bin:$PATH"
+
+          printf '{"mcpServers":{"asc":{"command":"python","args":["~/mcp_server.py"]}}}\n' > "$tmp/asc.json"
+
+          # 1) ad-hoc flags: skills into settings, servers into the MCP config
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin" \
+            --skills "~/code/hunt/skills" --mcp-config "$tmp/asc.json" > "$tmp/1.log" 2>&1
+          grep -qF '"~/code/hunt/skills"' "$tmp/agent/settings.json"
+          grep -qF '"defaultProjectTrust": "always"' "$tmp/agent/settings.json"
+          grep -qF '"asc"' "$tmp/mcp/mcp.json"
+          grep -qF "$HOME/mcp_server.py" "$tmp/mcp/mcp.json"   # ~ expanded: the MCP client does not
+          ! grep -q "hunt file not found" "$tmp/1.log"
+
+          # 2) a reinstall must not delete user state inside the install dir
+          printf '{"keep":true}\n' > "$tmp/install/gate.json"
+          mkdir -p "$tmp/install/playwright-profile"
+          printf 'cookie\n' > "$tmp/install/playwright-profile/Default"
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin" --no-settings
+          test -f "$tmp/install/gate.json"
+          test -f "$tmp/install/playwright-profile/Default"
+          test -f "$tmp/install/scripts/apply-hunt.mjs"
+
+          # 3) repeating the same wiring is a no-op, not a duplicate
+          before="$(cat "$tmp/agent/settings.json")"
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin" --no-hunt \
+            --skills "~/code/hunt/skills" > "$tmp/3.log" 2>&1
+          test "$before" = "$(cat "$tmp/agent/settings.json")"
+          grep -q "nothing to change" "$tmp/3.log"
+
+          # 4) the hunt file drives skills, MCP servers and pi packages
+          printf '{"skills":["~/from-hunt.json"],"mcpServers":{"pw":{"command":"npx"}},"piPackages":["npm:pi-mcp-adapter"]}\n' > "$tmp/install/hunt.json"
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin"
+          grep -qF '"~/from-hunt.json"' "$tmp/agent/settings.json"
+          grep -qF '"pw"' "$tmp/mcp/mcp.json"
+          grep -qF "install npm:pi-mcp-adapter" "$PI_LOG"
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin" > "$tmp/4b.log" 2>&1
+          grep -qF "pi package present: npm:pi-mcp-adapter" "$tmp/4b.log"
+
+          # 5) --no-settings skips the wiring instead of half-applying it
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin" --no-settings --skills "~/never" > "$tmp/5.log" 2>&1
+          grep -q "skipping the skills/MCP wiring" "$tmp/5.log"
+          ! grep -qF '"~/never"' "$tmp/agent/settings.json"
+
+          # 6) the new flags are documented
+          bash install.sh --help > "$tmp/help.txt" 2>&1
+          grep -qF -- "--skills DIR" "$tmp/help.txt"
+          grep -qF -- "--mcp-config F" "$tmp/help.txt"
+          grep -qF -- "--no-hunt" "$tmp/help.txt"

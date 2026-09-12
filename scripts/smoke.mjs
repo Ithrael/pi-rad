@@ -13,7 +13,7 @@
  *   node scripts/smoke.mjs --only goal,subagent
  */
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -132,6 +132,21 @@ function toolEnds(session) {
 	return session.events.filter((e) => e.type === "tool_execution_end");
 }
 
+/**
+ * Is another installed package already providing a tool?
+ *
+ * `pi-subagents` registers a `subagent` tool too, and pi treats the clash as
+ * fatal (it refuses to load that extension and exits), so the built-in
+ * subagent scenarios cannot run while it is installed.
+ */
+function ownsSubagentTool() {
+	try {
+		return spawnSync("pi", ["list"], { encoding: "utf-8" }).stdout?.includes("pi-subagents") === true;
+	} catch {
+		return false;
+	}
+}
+
 const results = [];
 function record(name, status, detail) {
 	results.push({ name, status, detail });
@@ -165,6 +180,8 @@ async function scenario(name, fn) {
 // ── scenarios ────────────────────────────────────────────────────────
 
 await scenario("discovery", async () => {
+	// Default state: pi-rad's built-in subagents feature is off, so /agents is
+	// not registered (and cannot be enabled while pi-subagents is installed).
 	const session = new RpcSession([]);
 	session.send({ type: "get_commands" });
 	const response = await session.waitFor(
@@ -179,7 +196,7 @@ await scenario("discovery", async () => {
 		"armor",
 		"goal",
 		"plan",
-		"agents",
+		"findings",
 		"rad-review",
 		"rad-harden",
 		"rad-deep",
@@ -334,7 +351,11 @@ await scenario("goal", async () => {
 });
 
 await scenario("subagent", async () => {
-	const session = new RpcSession([]);
+	if (ownsSubagentTool()) {
+		return { status: "SKIP", detail: "pi-subagents is installed and owns the `subagent` tool" };
+	}
+	// The built-in subagent tool is off by default; turn it on for this scenario.
+	const session = new RpcSession([], { PI_RAD_FEATURE_SUBAGENTS: "true" });
 	session.prompt(
 		"Call the subagent tool exactly once with agent:'scout', task:'List the files in the current directory and report them in one line.', agentScope:'bundled'. Do nothing else.",
 	);

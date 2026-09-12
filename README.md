@@ -51,10 +51,51 @@ Options:
 bash install.sh --dev            # register this checkout in place
 bash install.sh --dir DIR        # custom install directory
 bash install.sh --bin DIR        # custom launcher directory
-bash install.sh --no-settings    # do not touch settings.json
+bash install.sh --no-settings    # do not touch settings.json or the MCP config
+bash install.sh --skills DIR     # also load skills from DIR (repeatable)
+bash install.sh --mcp-config F   # also register the MCP servers in F (repeatable)
+bash install.sh --hunt FILE      # hunt setup file (default: $PI_RAD_HOME/hunt.json)
+bash install.sh --no-hunt        # ignore the default hunt.json
 bash install.sh --uninstall      # unregister and remove the launcher
 bash install.sh --uninstall --purge   # also delete the install directory
 ```
+
+### Wiring your own toolchains
+
+pi-rad is generic; the skills and MCP servers you actually use are not. Declare
+them once in `$PI_RAD_HOME/hunt.json` (by default `~/.pi-rad/hunt.json`) and one
+command reproduces the whole setup on another machine:
+
+```json
+{
+  "skills": ["~/code/my-skills", "~/code/tool/.pi/skills"],
+  "mcpServers": {
+    "tool": { "command": "~/code/tool/.venv/bin/python", "args": ["~/code/tool/mcp_server.py"] }
+  },
+  "mcpConfig": "~/shared-mcp.json",
+  "piPackages": ["npm:pi-mcp-adapter"]
+}
+```
+
+```bash
+bash install.sh                       # reads ~/.pi-rad/hunt.json when present
+bash install.sh --skills ~/other      # ad-hoc: add one more skill directory
+bash install.sh --no-hunt             # plain install, ignore the hunt file
+```
+
+Every step is idempotent: skill paths are unioned into the existing `skills`
+array, MCP servers are merged by name (an identical definition is left alone),
+and packages already in `pi list` are not reinstalled.
+
+`~` and `${HOME}` / `${PI_RAD_HOME}` inside MCP `command` / `args` / `env`
+values are expanded before writing, because the MCP client does not expand them;
+skill paths are written as given, because pi does expand them. Servers go to
+`${XDG_CONFIG_HOME:-~/.config}/mcp/mcp.json` (override with `PI_RAD_MCP_CONFIG`),
+the shared MCP config a client such as `pi-mcp-adapter` reads.
+
+Files inside the install directory that hold your own state — `patches.json`,
+`gate.json`, `hunt.json`, `armor.json`, `armor.md`, `subagents.json`, and the
+Playwright profile directory — are never deleted by a reinstall.
 
 Prefer pi's own package manager? pi-rad is a normal package:
 
@@ -254,9 +295,10 @@ environment variable:
   "armor": true,
   "auto-trust": true,
   "attribution-off": true,
-  "subagents": true,
+  "subagents": false,
   "plan-mode": true,
   "goal": true,
+  "findings": true,
   "statusline": true,
   "theme": true,
   "lean": false,
@@ -276,7 +318,18 @@ built-in default.
 
 ### Subagent agents
 
-Agents are markdown files with YAML frontmatter:
+**Off by default.** Use the [`pi-subagents`](https://www.npmjs.com/package/pi-subagents)
+package unless you specifically want a zero-dependency implementation: it adds
+background runs, a FleetView inspector, mid-run steering, missions, per-agent
+models, and its own builtin agents. It reads agents from
+`~/.pi/agent/agents/` — the same directory as the section below — so your agent
+definitions work with either.
+
+To use pi-rad's own implementation instead, run `/rad subagents on`. Do not enable
+both: pi loads pi-rad first and then refuses to load the whole `pi-subagents`
+extension (`Tool "subagent" conflicts with …`), so you would silently lose it.
+
+Its agents are markdown files with YAML frontmatter:
 
 ```markdown
 ---
@@ -295,6 +348,11 @@ They are discovered from, in this order (later wins on a name clash):
 3. `<cwd>/.pi/agents/*.md` (nearest ancestor)
 
 ### Watching subagents in tmux
+
+> With the `pi-subagents` package you do not need tmux: it renders a FleetView
+> below the editor and lets you open any running agent's live conversation and
+> steer it mid-run. The tmux transport described below belongs to pi-rad's own
+> implementation.
 
 By default a subagent is a single opaque `subagent` tool call — you see the
 final result but not what it is doing. Set `tmux: true` (or run pi inside tmux

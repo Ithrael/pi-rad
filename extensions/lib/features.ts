@@ -54,8 +54,8 @@ export const FEATURES: readonly FeatureDef[] = [
 	},
 	{
 		id: "subagents",
-		desc: "Delegate work to isolated subagents (single / parallel / chain)",
-		default: true,
+		desc: "Built-in subagent tool (off by default; the pi-subagents package is the richer option)",
+		default: false,
 	},
 	{
 		id: "plan-mode",

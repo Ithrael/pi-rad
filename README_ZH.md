@@ -47,10 +47,49 @@ bash install.sh
 bash install.sh --dev            # 就地注册当前 checkout
 bash install.sh --dir DIR        # 自定义安装目录
 bash install.sh --bin DIR        # 自定义启动器目录
-bash install.sh --no-settings    # 不修改 settings.json
+bash install.sh --no-settings    # 不修改 settings.json，也不碰 MCP 配置
+bash install.sh --skills DIR     # 额外加载 DIR 里的技能（可重复）
+bash install.sh --mcp-config F   # 额外注册 F 里的 MCP server（可重复）
+bash install.sh --hunt FILE      # hunt 配置文件（默认 $PI_RAD_HOME/hunt.json）
+bash install.sh --no-hunt        # 忽略默认的 hunt.json
 bash install.sh --uninstall      # 取消注册并删除启动器
 bash install.sh --uninstall --purge   # 同时删除安装目录
 ```
+
+### 把外部工具链接进来
+
+pi-rad 本身是通用的，但你实际用的技能和 MCP server 不是。把它们写在
+`$PI_RAD_HOME/hunt.json`（默认 `~/.pi-rad/hunt.json`）里，换一台机器一条
+命令就能复原整套配置：
+
+```json
+{
+  "skills": ["~/code/my-skills", "~/code/tool/.pi/skills"],
+  "mcpServers": {
+    "tool": { "command": "~/code/tool/.venv/bin/python", "args": ["~/code/tool/mcp_server.py"] }
+  },
+  "mcpConfig": "~/shared-mcp.json",
+  "piPackages": ["npm:pi-mcp-adapter"]
+}
+```
+
+```bash
+bash install.sh                       # 存在 ~/.pi-rad/hunt.json 就自动应用
+bash install.sh --skills ~/other      # 临时再加一个技能目录
+bash install.sh --no-hunt             # 干净安装，忽略 hunt 文件
+```
+
+每一步都是幂等的：技能路径合并进现有 `skills` 数组、MCP server 按名字合并
+（定义完全相同时不动）、已在 `pi list` 里的包不会重装。
+
+MCP `command` / `args` / `env` 里的 `~` 和 `${HOME}` / `${PI_RAD_HOME}` 会在写入
+前展开（因为 MCP 客户端不展开它们）；技能路径按原样写入（因为 pi 会展开）。
+server 写入 `${XDG_CONFIG_HOME:-~/.config}/mcp/mcp.json`（可用 `PI_RAD_MCP_CONFIG`
+改），也就是 `pi-mcp-adapter` 这类客户端读取的共享 MCP 配置。
+
+安装目录里属于你自己状态的文件——`patches.json`、`gate.json`、`hunt.json`、
+`armor.json`、`armor.md`、`subagents.json`，以及 Playwright profile 目录——
+重装时不会被删除。
 
 也可以直接用 pi 的包管理器：
 
@@ -233,9 +272,10 @@ cp gate.example.json ~/.pi-rad/gate.json
   "armor": true,
   "auto-trust": true,
   "attribution-off": true,
-  "subagents": true,
+  "subagents": false,
   "plan-mode": true,
   "goal": true,
+  "findings": true,
   "statusline": true,
   "theme": true,
   "lean": false,
@@ -254,7 +294,17 @@ PI_RAD_HOME=/custom/pi-rad pi-rad        # 自定义配置目录
 
 ### 子代理文件
 
-代理是带 YAML frontmatter 的 markdown 文件：
+**默认关闭。** 除非你就是要一个零依赖实现，否则用
+[`pi-subagents`](https://www.npmjs.com/package/pi-subagents) 这个包：它多了后台
+运行、FleetView 检视器、运行中插话、missions、按 agent 指定模型，以及自己的
+内置 agent。它从 `~/.pi/agent/agents/` 读 agent——和下面这节同一个目录——所以你的
+agent 定义两边都能用。
+
+要用 pi-rad 自带的实现，执行 `/rad subagents on`。不要两个都开：pi 会先加载
+pi-rad，然后拒绝加载整个 `pi-subagents` 扩展（`Tool "subagent" conflicts with …`），
+等于静默丢掉了那个包。
+
+它的代理是带 YAML frontmatter 的 markdown 文件：
 
 ```markdown
 ---
@@ -273,6 +323,9 @@ tools: read, bash, grep, find, ls
 3. `<cwd>/.pi/agents/*.md`（最近的祖先目录）
 
 ### 在 tmux 里看子代理
+
+> 用 `pi-subagents` 包就不需要 tmux：它在编辑器下方渲染 FleetView，可以打开任意
+> 运行中 agent 的实时对话并中途插话。下面这套 tmux 传输属于 pi-rad 自带的实现。
 
 默认情况下子代理就是一个不透明的 `subagent` 工具调用：只看得到最终结果，看不到过程。传
 `tmux: true`（或在 tmux 里运行 pi，默认 `auto` 就会启用），每个子代理会开一个独立的

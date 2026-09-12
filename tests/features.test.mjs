@@ -44,7 +44,8 @@ describe("feature registry", () => {
 	});
 
 	it("resolves defaults when nothing is configured", () => {
-		assert.equal(resolveFeature("subagents"), true);
+		// subagents is off by default: the pi-subagents npm package is the richer option.
+		assert.equal(resolveFeature("subagents"), false);
 		assert.equal(resolveFeature("goal"), true);
 		assert.equal(resolveFeature("theme"), true);
 		assert.equal(resolveFeature("lean"), false);
@@ -94,7 +95,7 @@ describe("patches.json persistence", () => {
 		writeFileSync(patchesPath(), "{ not json", "utf-8");
 		reload();
 		assert.deepEqual(readPatches(), {});
-		assert.equal(resolveFeature("subagents"), true);
+		assert.equal(resolveFeature("subagents"), false);
 	});
 
 	it("reports a status line", () => {

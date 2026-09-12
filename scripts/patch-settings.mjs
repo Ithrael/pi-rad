@@ -3,9 +3,11 @@
  * Safely merge pi-rad preferences into a pi settings.json.
  *
  * Usage:
- *   node patch-settings.mjs <settings.json> [--set k=v ...] [--set-if-absent k=v ...] [--dry-run]
+ *   node patch-settings.mjs <settings.json> [--set k=v ...] [--set-if-absent k=v ...]
+ *        [--append k=v ...] [--dry-run]
  *
  * Keys may be dotted for one level of nesting (e.g. compaction.enabled).
+ * `--append` adds values to an array without duplicating existing entries.
  * Values are parsed as JSON when possible, otherwise treated as a string.
  * The file is created when missing, otherwise preserved byte-for-byte except
  * for the keys being changed. Writes are atomic and keep the file mode.
@@ -56,12 +58,14 @@ if (!settingsPath) fail("missing <settings.json> path");
 
 const sets = [];
 const setIfAbsent = [];
+const appends = [];
 let dryRun = false;
 
 for (let i = 0; i < args.length; i++) {
 	const arg = args[i];
 	if (arg === "--set") sets.push(args[++i]);
 	else if (arg === "--set-if-absent") setIfAbsent.push(args[++i]);
+	else if (arg === "--append") appends.push(args[++i]);
 	else if (arg === "--dry-run") dryRun = true;
 	else fail(`unknown argument: ${arg}`);
 }
@@ -101,6 +105,17 @@ for (const assignment of setIfAbsent) {
 	if (getPath(settings, key) !== undefined) continue;
 	setPath(settings, key, value);
 	changed.push(`${key} = ${JSON.stringify(value)}`);
+}
+for (const assignment of appends) {
+	const [key, value] = parseAssignment(assignment, "--append");
+	const current = getPath(settings, key);
+	if (current !== undefined && !Array.isArray(current)) fail(`--append ${key}: existing value is not an array`);
+	const list = Array.isArray(current) ? [...current] : [];
+	const values = Array.isArray(value) ? value : [value];
+	const added = values.filter((candidate) => !list.some((entry) => JSON.stringify(entry) === JSON.stringify(candidate)));
+	if (added.length === 0) continue;
+	setPath(settings, key, [...list, ...added]);
+	changed.push(`${key} += ${JSON.stringify(added)}`);
 }
 
 if (changed.length === 0) {

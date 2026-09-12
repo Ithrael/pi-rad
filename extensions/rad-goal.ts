@@ -89,6 +89,8 @@ goal is done, call \`goal_complete\` with evidence. If you are stuck, call
 }
 
 export default function (pi: ExtensionAPI) {
+	if (!isEnabled("goal")) return;
+
 	let state: GoalState | null = null;
 	let suppressContinue = false;
 

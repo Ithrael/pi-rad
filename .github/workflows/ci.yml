@@ -43,3 +43,33 @@ jobs:
           grep -q '"defaultProjectTrust": "always"' /tmp/pi-agent/settings.json
           grep -q '"theme": "dark"' /tmp/pi-agent/settings.json
           grep -q '"enableInstallTelemetry": false' /tmp/pi-agent/settings.json
+
+      - name: install.sh smoke test
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/bin" "$tmp/agent"
+          printf '{}\n' > "$tmp/agent/settings.json"
+          cat > "$tmp/bin/pi" <<'SH'
+          #!/usr/bin/env bash
+          printf '%s %s\n' "$1" "$2" >> "$PI_LOG"
+          SH
+          chmod +x "$tmp/bin/pi"
+          export PI_LOG="$tmp/pi.log" PI_AGENT_DIR="$tmp/agent"
+          export PATH="$tmp/bin:$PATH"
+
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin" --no-settings
+          test -f "$tmp/install/package.json"
+          test -f "$tmp/install/extensions/rad-core.ts"
+          test -f "$tmp/install/patches.json"
+          test -x "$tmp/bin/pi-rad"
+          grep -qF "install $tmp/install" "$PI_LOG"
+          grep -qF "PI_RAD_HOME=\"$tmp/install\"" "$tmp/bin/pi-rad"
+
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin" --uninstall
+          test ! -f "$tmp/bin/pi-rad"
+          test -d "$tmp/install"
+          grep -qF "remove $tmp/install" "$PI_LOG"
+
+          bash install.sh --dir "$tmp/install" --bin "$tmp/bin" --uninstall --purge
+          test ! -d "$tmp/install"

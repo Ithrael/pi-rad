@@ -10,6 +10,8 @@ pi-rad 是一个 [pi 包](https://pi.dev/docs/latest/packages)：一组扩展、
 与 fork 不同，pi-rad 不改 pi 源码，全部通过扩展 API 接入。因此 `pi update`
 不会影响它，任何带扩展 API 的 pi 版本都能用（已在 0.85.1 验证）。
 
+落地页：<https://ithrael.github.io/pi-rad/>
+
 ```
 ┌─ pi-rad ─────────────────────────────────────────────────┐
 │  子代理   计划模式   精简工具   安全研究语境             │

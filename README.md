@@ -20,6 +20,8 @@ ships the extension API (tested against 0.85.1).
 └──────────────────────────────────────────────────────────┘
 ```
 
+Landing page: <https://ithrael.github.io/pi-rad/>
+
 ## Prerequisites
 
 | Tool | Why | Install |

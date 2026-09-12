@@ -166,7 +166,11 @@ export default function (pi: ExtensionAPI) {
 
 	// ── auto-continuation ────────────────────────────────────────────
 	pi.on("agent_settled", async (_event, ctx) => {
-		if (!isEnabled("goal") || !state || state.status !== "active") return;
+		if (!isEnabled("goal") || !state) return;
+		// goal_complete / goal_blocked change state but have no ctx to call
+		// setStatus themselves, so refresh the footer here before bailing out.
+		setStatus(ctx);
+		if (state.status !== "active") return;
 		// One-shot modes dispose the session when the prompt finishes, so there is
 		// nothing to continue into. Goal auto-continuation is for interactive and
 		// RPC sessions.
